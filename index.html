@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Customer Pulse — Legacy Group</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --red:#C8102E; --accent:#C8102E; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:#f8fafc; color:#1e293b; margin:0; }
+  a { color: inherit; }
+  button { font-family: inherit; cursor: pointer; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+  header { background:#0f172a; color:#fff; }
+  .hrow { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:16px 0; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .logo { width:40px; height:40px; border-radius:10px; background:var(--accent); display:grid; place-items:center; }
+  .logo svg { width:22px; height:22px; }
+  .title { font-weight:700; font-size:18px; line-height:1; }
+  .subtitle { color:#cbd5e1; font-size:12px; margin-top:5px; display:flex; align-items:center; gap:6px; }
+  .conn { display:inline-flex; align-items:center; gap:5px; }
+  .conn.live { color:#34d399; } .conn.off { color:#fb7185; }
+  .cdot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .personas { display:flex; background:#1e293b; border-radius:10px; padding:4px; }
+  .personas button { border:none; background:transparent; color:#cbd5e1; font-size:12px; font-weight:500; padding:6px 12px; border-radius:7px; }
+  .personas button.active { background:#fff; color:#0f172a; }
+  .view-as { color:#94a3b8; font-size:12px; margin-right:4px; }
+
+  .tabs { display:flex; gap:4px; overflow-x:auto; }
+  .tabs button { border:none; background:transparent; color:#94a3b8; font-size:14px; font-weight:500; padding:10px 16px; border-bottom:2px solid transparent; white-space:nowrap; display:flex; align-items:center; gap:7px; }
+  .tabs button.active { color:#fff; border-bottom-color:var(--accent); }
+  .tabs svg { width:15px; height:15px; }
+
+  main { padding:24px 0 60px; }
+  h1.page { font-size:20px; font-weight:700; color:#0f172a; margin:0; }
+  .muted { color:#64748b; } .tiny { font-size:12px; }
+
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:20px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .grid2 { grid-template-columns:1fr; } }
+  @media (max-width:640px){
+    input, select, textarea { font-size:16px; padding:10px 12px; }   /* 16px stops iOS zooming on focus */
+    .search input { font-size:16px; }
+    .wrap { padding:0 14px; }
+    .personas { flex-wrap:wrap; justify-content:flex-end; }
+    .view-as { display:none; }
+    .datechip { padding:7px 13px; font-size:13px; }
+    h1.page { font-size:18px; }
+    .submitbar { flex-direction:column; align-items:stretch !important; }
+    .submitbar .btn { width:100%; justify-content:center; padding:13px 16px; font-size:15px; }
+    .qbtn { padding:9px 13px; }
+  }
+  label.f { display:block; }
+  label.f .lbl { font-size:12px; font-weight:500; color:#475569; margin-bottom:4px; display:block; }
+  .req { color:var(--accent); }
+  input, select, textarea { width:100%; border:1px solid #e2e8f0; border-radius:9px; padding:8px 11px; font-size:14px; font-family:inherit; background:#fff; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:#94a3b8; box-shadow:0 0 0 3px rgba(15,23,42,.06); }
+  textarea { min-height:88px; resize:vertical; }
+  .btn { background:var(--accent); color:#fff; border:none; border-radius:9px; padding:9px 16px; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:7px; }
+  .btn[disabled] { opacity:.4; cursor:not-allowed; }
+  .btn.block { width:100%; justify-content:center; padding:10px; }
+  .btn svg { width:15px; height:15px; }
+
+  .pill { display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; line-height:1; padding:4px 10px; border-radius:999px; border:1px solid; }
+  .stack > * + * { margin-top:8px; }
+  .item { width:100%; text-align:left; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .item:hover { border-color:#cbd5e1; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+  .item .cust { font-weight:600; color:#0f172a; }
+  .meta { font-size:12px; color:#64748b; display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:4px; }
+  .meta svg { width:12px; height:12px; vertical-align:-1px; }
+  .chev { color:#cbd5e1; flex:none; }
+  .chev svg { width:18px; height:18px; }
+  .histrow { width:100%; text-align:left; background:#f8fafc; border:1px solid #eef2f6; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+  .histrow:hover { border-color:#cbd5e1; background:#fff; }
+  .histrow .sub { color:#64748b; font-size:12px; margin-top:3px; }
+  .cardgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+  .subcard { text-align:left; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:7px; min-height:150px; }
+  .subcard.hipri { background:linear-gradient(180deg,#fff1f2,#fff); border-color:#fda4af; box-shadow:0 0 0 1px #fecdd3; }
+  .hiflag { font-size:11px; font-weight:700; color:#be123c; background:#ffe4e6; padding:1px 8px; border-radius:999px; }
+  .subcard:hover { border-color:#cbd5e1; box-shadow:0 1px 5px rgba(0,0,0,.06); }
+  .subcard .cn { font-weight:700; color:#0f172a; font-size:15px; line-height:1.2; }
+  .subcard .kv { font-size:12px; color:#475569; }
+  .subcard .kv b { color:#334155; font-weight:600; }
+  .subcard .rsn { font-size:12px; color:#64748b; line-height:1.35; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin-top:auto; }
+  .urg { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#64748b; }
+  .udot { width:8px; height:8px; border-radius:50%; }
+  .aging { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#e11d48; font-weight:500; }
+  .aging svg { width:12px; height:12px; }
+
+  .filters { display:flex; gap:4px; background:#fff; border:1px solid #e2e8f0; border-radius:9px; padding:4px; }
+  .filters button { border:none; background:transparent; color:#64748b; font-size:12px; font-weight:500; padding:5px 11px; border-radius:7px; }
+  .filters button.active { background:#0f172a; color:#fff; }
+  .sortsel { border:1px solid #e2e8f0; border-radius:9px; padding:6px 10px; font-size:12px; color:#475569; background:#fff; font-family:inherit; }
+  .sortsel:focus { outline:none; border-color:#94a3b8; }
+  .btn-del { background:#fff; color:#dc2626; border:1px solid #fecaca; border-radius:9px; padding:8px 14px; font-size:13px; font-weight:600; }
+  .btn-del:hover { background:#fef2f2; border-color:#fca5a5; }
+  .btn-del[disabled] { opacity:.5; cursor:not-allowed; }
+  .datechip { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:999px; padding:4px 11px; font-size:12px; font-weight:500; cursor:pointer; }
+  .datechip:hover { border-color:#cbd5e1; background:#f8fafc; }
+  .linkish { background:none; border:none; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer; padding:0; }
+  .linkish:hover { text-decoration:underline; }
+  .tscroll { max-height:620px; overflow-y:auto; padding-right:4px; }
+  .mgrbanner { background:#fef2f4; border:1px solid #fde2e5; border-left:3px solid #e11d48; border-radius:10px; padding:11px 14px; margin-bottom:16px; }
+  .modeseg { display:inline-flex; gap:4px; background:#f1f5f9; border-radius:10px; padding:4px; margin-bottom:16px; flex-wrap:wrap; }
+  .modeseg button { border:none; background:transparent; color:#475569; font-size:13px; font-weight:600; padding:7px 14px; border-radius:7px; cursor:pointer; }
+  .modeseg button.active { background:#fff; color:var(--accent); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+
+  .search { position:relative; margin-bottom:14px; max-width:380px; }
+  .search input { width:100%; padding:9px 32px 9px 34px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; }
+  .search input:focus { outline:none; border-color:#94a3b8; box-shadow:0 0 0 3px rgba(15,23,42,.06); }
+  .search .si { position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:#94a3b8; pointer-events:none; }
+  .search .clr { position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:#e2e8f0; color:#475569; border-radius:50%; width:19px; height:19px; font-size:11px; line-height:1; cursor:pointer; display:grid; place-items:center; }
+  .search .clr:hover { background:#cbd5e1; }
+
+  .info .k { font-size:11px; color:#94a3b8; } .info .v { font-size:14px; color:#334155; }
+  .note { border:1px solid #eef2f6; border-left:3px solid #cbd5e1; border-radius:8px; padding:8px 12px; background:#fcfcfd; }
+  .touch { border:1px solid #eef2f6; border-left:3px solid var(--accent); border-radius:10px; padding:10px 12px; background:#fff; }
+  .ttype { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#1e40af; background:#dbeafe; padding:1px 8px; border-radius:999px; }
+  .tbits { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+  .tbit { font-size:12px; color:#334155; background:#f8fafc; border:1px solid #eef2f6; border-radius:6px; padding:2px 8px; }
+  .fsection { border:1px solid #e2e8f0; border-left-width:3px; border-radius:10px; padding:12px 14px; margin-top:12px; }
+  .fsection-h { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#475569; margin-bottom:10px; display:flex; align-items:center; gap:7px; }
+  .fsdot { width:8px; height:8px; border-radius:2px; display:inline-block; }
+  .fs-touch { border-left-color:#2563eb; background:#f7f9ff; }
+  .fs-covered { border-left-color:#0d9488; background:#f4fdfb; }
+  .fs-money { border-left-color:#16a34a; background:#f4fdf7; }
+  .wm-progress { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .wm-progress span { transform:rotate(-8deg); font-size:22px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(22,163,74,.28); border:2px dashed rgba(22,163,74,.35); border-radius:8px; padding:6px 20px; }
+  .fs-notes { border-left-color:#d97706; background:#fffcf4; }
+  .softbox { background:#f8fafc; border:1px solid #f1f5f9; border-radius:9px; padding:12px; }
+
+  .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  @media (max-width:720px){ .stats { grid-template-columns:repeat(2,1fr); } }
+  .stat .k { font-size:12px; color:#64748b; } .stat .v { font-size:24px; font-weight:700; margin-top:4px; } .stat .s { font-size:10px; color:#94a3b8; }
+  .bar { flex:1; height:24px; background:#f1f5f9; border-radius:6px; overflow:hidden; }
+  .bar > div { height:100%; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; color:#fff; font-size:12px; font-weight:500; }
+  .backlink { background:none; border:none; color:#64748b; font-size:14px; padding:0; margin-bottom:12px; }
+  .empty { text-align:center; border:1px dashed #e2e8f0; border-radius:14px; padding:40px; background:#fff; }
+  .empty svg { width:28px; height:28px; color:#cbd5e1; }
+
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; padding:10px 16px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.15); display:none; align-items:center; gap:8px; z-index:50; }
+  #toast.show { display:flex; } #toast.ok { background:#0f172a; } #toast.bad { background:#dc2626; }
+  #toast svg { width:16px; height:16px; }
+  .loading { min-height:300px; display:grid; place-items:center; color:#94a3b8; font-size:14px; }
+
+  .qrow { display:flex; flex-wrap:wrap; gap:8px; }
+  .qbtn { border:1px solid #e2e8f0; background:#fff; color:#334155; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:500; }
+  .qbtn:hover { border-color:#cbd5e1; background:#f8fafc; }
+  .qbtn svg { width:14px; height:14px; vertical-align:-2px; margin-right:3px; }
+  .qbtn[disabled] { opacity:.5; cursor:not-allowed; }
+  .qbtn.assign { background:#0f172a; color:#fff; border-color:#0f172a; }
+  .qbtn.won { border-color:#bbf7d0; color:#166534; }
+  .qbtn.lost { border-color:#fecdd3; color:#9f1239; }
+
+  .attn { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:8px; }
+  @media(max-width:640px){ .attn { grid-template-columns:1fr; } }
+  .attncard { border-radius:14px; padding:16px; border:1px solid; }
+  .attncard.ok { background:#f0fdf4; border-color:#bbf7d0; }
+  .attncard.bad { background:#fff1f2; border-color:#fecdd3; }
+  .attncard .an { font-size:28px; font-weight:800; line-height:1; }
+  .attncard.ok .an { color:#16a34a; } .attncard.bad .an { color:#e11d48; }
+  .attncard .al { font-size:13px; font-weight:600; color:#334155; margin-top:6px; }
+  .attncard .as { font-size:11px; color:#64748b; margin-top:2px; }
+
+  .cmt { display:flex; gap:10px; margin-bottom:12px; }
+  .av { width:30px; height:30px; border-radius:50%; flex:none; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; }
+  .av.mgr { background:#0d9488; } .av.sales { background:#2563eb; }
+  .rb { font-size:10px; font-weight:600; padding:1px 6px; border-radius:999px; background:#e2e8f0; color:#475569; }
+  .rb.mgr { background:#fde2e5; color:#9f1239; }
+  .cbody { font-size:14px; color:#334155; margin-top:2px; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+  <div id="root"><div class="loading">Connecting to Supabase…</div></div>
+  <div id="toast"></div>
+
+<script>
+// ---- Live Supabase (PostgREST) ----------------------------------------
+const SB_URL = "https://xfcjxmoqsfcvlskievgx.supabase.co/rest/v1";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmY2p4bW9xc2Zjdmxza2lldmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjk4NzYsImV4cCI6MjA5ODYwNTg3Nn0.lrZdijIuSOQxZMNFFdm_sjPgvJQFrYj41ihr-FhrU30";
+const H = { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" };
+const sbGet = async p => { const r = await fetch(SB_URL + "/" + p, { headers: H }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+const sbPost = async (t, b) => { const r = await fetch(SB_URL + "/" + t, { method:"POST", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+const sbPatch = async (t, f, b) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"PATCH", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"DELETE", headers:H }); if (!r.ok) throw new Error(await r.text()); return true; };
+
+// ---- Constants --------------------------------------------------------
+const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
+const CATEGORIES = ["Lost customer","Buying elsewhere","Product question","Needs training","Bad experience","Large job / project","Competitor issue","Pricing concern","New business opportunity","Other"];
+const ACTIONS = ["Call","Visit","Quote follow-up","Other"];
+const TOUCH_MAP = { "Call":"Contacted","Visit":"Visited","Email":"Contacted","Quote":"Quote pending","Needs more info":"Needs more info","Other":"Contacted" };
+const TOUCH_TYPES = Object.keys(TOUCH_MAP);
+const URGENCY = ["Low","Medium","High"];
+const SALESPEOPLE = ["Juan","Stephen","Lex","Unassigned"];
+const assigneeOptions = current => { const base=SALESPEOPLE.slice(); if(current && !base.includes(current)) base.unshift(current); return opts(base,current); };
+const STATUS_LIST = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost","No action needed","Needs more info"];
+const OPEN_STATUSES = ["New","Assigned","Contacted","Visited","Quote pending","Needs more info"];
+const STAGE_COLOR = { "New":"#0ea5e9","Assigned":"#6366f1","Contacted":"#f59e0b","Visited":"#14b8a6","Quote pending":"#8b5cf6","Won":"#10b981","Lost":"#f43f5e","No action needed":"#94a3b8","Needs more info":"#f97316" };
+const stageColor = s => STAGE_COLOR[s] || "#94a3b8";
+const STATUS_STYLE = {
+  "New":"background:#e0f2fe;color:#075985;border-color:#bae6fd",
+  "Assigned":"background:#e0e7ff;color:#3730a3;border-color:#c7d2fe",
+  "Contacted":"background:#fef3c7;color:#92400e;border-color:#fde68a",
+  "Visited":"background:#ccfbf1;color:#115e59;border-color:#99f6e4",
+  "Quote pending":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe",
+  "Won":"background:#dcfce7;color:#166534;border-color:#bbf7d0",
+  "Lost":"background:#ffe4e6;color:#9f1239;border-color:#fecdd3",
+  "No action needed":"background:#f1f5f9;color:#475569;border-color:#e2e8f0",
+  "Needs more info":"background:#ffedd5;color:#9a3412;border-color:#fed7aa",
+};
+const PERSONAS = [
+  { id:"daniel", name:"Daniel", role:"Counter", type:"employee" },
+  { id:"juan", name:"Juan", role:"Salesperson", type:"sales" },
+  { id:"stephen", name:"Stephen", role:"Manager", type:"manager" },
+  { id:"kathleen", name:"Kathleen", role:"Admin", type:"admin" },
+];
+const THEME = { employee:{accent:"#C8102E"}, sales:{accent:"#2563eb"}, manager:{accent:"#0d9488"}, admin:{accent:"#7c3aed"} };
+const accentFor = t => (THEME[t]||THEME.employee).accent;
+const today = () => new Date().toISOString().slice(0,10);const days = (a,b) => Math.round((new Date(b)-new Date(a))/86400000);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---- SVG icons --------------------------------------------------------
+const I = {
+  activity:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+  clip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>',
+  dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>',
+  bldg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeoff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg>',
+  trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>',
+  printer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+};
+
+// ---- State ------------------------------------------------------------
+const S = { rows:null, updates:[], comments:[], persona:PERSONAS[0], tab:"submit", selectedId:null, conn:"connecting", filter:"Open", mineFilter:"Open", scope:"mine", subScope:"mine", sort:"newest", search:"", _focus:null, busy:false };
+
+function addCadence(dateStr, val, unit){
+  const d=new Date(dateStr+"T00:00:00"); const n=Number(val)||1;
+  if(unit==="months") d.setMonth(d.getMonth()+n);
+  else if(unit==="days") d.setDate(d.getDate()+n);
+  else d.setDate(d.getDate()+n*7);
+  return d.toISOString().slice(0,10);
+}
+async function spawnDueVisits(){
+  try{
+    const due=(S.recurring||[]).filter(s=>s.active && s.next_due && s.next_due<=today());
+    if(!due.length) return;
+    for(const s of due){
+      const already=(S.rows||[]).some(r=>r.recurring_id===s.id && r.next_follow_up===s.next_due);
+      if(!already){
+        await sbPost("cp_requests",{ submitted_by:s.created_by||"Recurring", branch:s.branch||BRANCHES[0],
+          customer_name:s.customer_name, account_number:s.account_number||null, contact_name:s.contact_name||null, phone:s.phone||null,
+          category:"Recurring visit", urgency:"Medium", suggested_action:"Visit",
+          reason:s.note||("Recurring visit — every "+s.cadence_value+" "+s.cadence_unit),
+          status:(s.assigned_to&&s.assigned_to!=="Unassigned")?"Assigned":"New", assigned_to:s.assigned_to||"Unassigned",
+          next_follow_up:s.next_due, source:"Recurring visit", recurring_id:s.id, first_touched_at:null, last_action_date:today() });
+      }
+      let nd=s.next_due, guard=0;
+      while(nd<=today() && guard<60){ nd=addCadence(nd,s.cadence_value,s.cadence_unit); guard++; }
+      await sbPatch("cp_recurring","id=eq."+s.id,{ next_due:nd });
+    }
+    const [reqs,ups]=await Promise.all([ sbGet("cp_requests?select=*&order=submitted_at.desc"), sbGet("cp_updates?select=*&order=created_at.asc") ]);
+    S.rows=reqs; S.updates=ups;
+    S.recurring=await sbGet("cp_recurring?select=*&order=next_due.asc");
+  }catch(e){ /* never let spawning break a normal load */ }
+}
+async function load() {
+  try {
+    const [reqs, ups] = await Promise.all([
+      sbGet("cp_requests?select=*&order=submitted_at.desc"),
+      sbGet("cp_updates?select=*&order=created_at.asc"),
+    ]);
+    S.rows = reqs; S.updates = ups; S.conn = "live";
+    try { S.comments = await sbGet("cp_comments?select=*&order=created_at.asc"); } catch(_) { S.comments = []; }
+    try { S.recurring = await sbGet("cp_recurring?select=*&order=next_due.asc"); } catch(_) { S.recurring = []; }
+    await spawnDueVisits();
+    S.lastSync = new Date().toISOString();
+  } catch (e) { S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false); }
+  render();
+}
+function toast(msg, ok=true) {
+  const t = document.getElementById("toast");
+  t.className = "show " + (ok?"ok":"bad");
+  t.innerHTML = (ok?I.check:I.warn) + " " + esc(msg);
+  setTimeout(()=>{ t.className=""; }, 3000);
+}
+const updatesFor = id => S.updates.filter(u => u.request_id === id);
+const commentsFor = id => (S.comments||[]).filter(c => c.request_id === id);
+const isMgrNote = c => c.author_role==='manager' || c.author_role==='admin';
+const matchSearch = (r,q) => { if(!q) return true; q=q.toLowerCase(); return [r.customer_name,r.account_number,r.contact_name,r.assigned_to,r.branch].some(v=>(v||"").toLowerCase().includes(q)); };
+const inScope = r => S.scope==="everyone" ? true : S.scope==="unassigned" ? r.assigned_to==="Unassigned" : r.assigned_to===S.persona.name;
+const SORTS = [["newest","Newest first"],["oldest","Oldest first"],["az","Customer A–Z"],["followup","Follow-up (soonest)"],["urgency","Urgency (high first)"]];
+function sortList(list){
+  const arr=list.slice(); const by=S.sort;
+  const urg=u=>u==="High"?0:u==="Medium"?1:2;
+  const fu=r=>r.next_follow_up||"9999-99-99";
+  const dt=(a,b)=>a<b?-1:a>b?1:0;
+  if(by==="oldest") arr.sort((a,b)=>dt(a.submitted_at,b.submitted_at));
+  else if(by==="az") arr.sort((a,b)=>(a.customer_name||"").toLowerCase().localeCompare((b.customer_name||"").toLowerCase()));
+  else if(by==="followup") arr.sort((a,b)=>dt(fu(a),fu(b)));
+  else if(by==="urgency") arr.sort((a,b)=>urg(a.urgency)-urg(b.urgency));
+  else arr.sort((a,b)=>dt(b.submitted_at,a.submitted_at)); // newest
+  return arr;
+}
+function sortSelect(){ return `<select data-sort class="sortsel">${SORTS.map(([v,l])=>`<option value="${v}" ${S.sort===v?"selected":""}>Sort: ${l}</option>`).join("")}</select>`; }
+function searchBar(ph){ return `<div class="search"><span class="si">${I.search}</span><input data-search="1" id="q_search" value="${esc(S.search)}" placeholder="${esc(ph)}" autocomplete="off"/>${S.search?`<button class="clr" data-clearsearch="1">&times;</button>`:''}</div>`; }
+function stageLegend(){
+  const seq = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost"];
+  return `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px">${seq.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><span style="width:10px;height:10px;border-radius:2px;background:${stageColor(s)}"></span>${esc(s)}</span>`).join("")}</div>`;
+}
+
+// Tie a customer's calls together by account number (falling back to name), newest first.
+function customerHistory(r){
+  const acct=(r.account_number||"").trim();
+  const name=(r.customer_name||"").trim().toLowerCase();
+  return S.rows.filter(x=> x.id!==r.id && (
+    (acct && (x.account_number||"").trim()===acct) ||
+    (name && (x.customer_name||"").trim().toLowerCase()===name)
+  )).sort((a,b)=> a.submitted_at<b.submitted_at?1:-1);
+}
+function historyCard(r){
+  const hist=customerHistory(r);
+  const acct=(r.account_number||"").trim();
+  const tie = acct ? "account #"+esc(acct) : "customer name";
+  const rows=hist.map((h,i)=>{
+    const ups=updatesFor(h.id);
+    const last=ups.length?ups[ups.length-1]:null;
+    const what=(last&&last.note)||h.public_summary||h.reason||"";
+    return `<button class="histrow" data-open="${h.id}" style="border-left:4px solid ${stageColor(h.status)}">
+      <div style="min-width:0">
+        <div style="font-size:13px"><b>${esc(fmtDate(h.submitted_at))}</b> <span class="muted">(${esc(relDay(h.submitted_at))})</span> ${pill(h.status)} ${i===0?'<span class="rb" style="background:#fef3c7;color:#92400e">latest</span>':''}</div>
+        <div class="sub">${h.assigned_to==='Unassigned'?'unassigned':esc(h.assigned_to)} · ${esc(h.suggested_action)}${what?' — '+esc(what):''}</div>
+      </div>
+      <span class="chev">${I.chev}</span>
+    </button>`;
+  }).join("");
+  return `<div class="card" id="cust-history" style="margin-top:20px">
+    <h2 style="font-size:16px;font-weight:700;margin:0 0 4px">Customer history</h2>
+    <div class="tiny muted" style="margin-bottom:14px">${hist.length? hist.length+" other call"+(hist.length===1?"":"s")+" on record for this customer, tied by "+tie+". Open any of them — even the ones that weren't yours." : "This is the first recorded call for this customer."}</div>
+    ${hist.length? `<div class="stack">${rows}</div>`:""}
+  </div>`;
+}
+const fmtTs = ts => { try { return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } catch(e){ return ts; } };
+const relDay = d => { if(!d) return ""; const n=days(d,today()); return n<=0?"today":n===1?"yesterday":n<7?n+" days ago":n<14?"last week":Math.floor(n/7)+" weeks ago"; };
+const fmtDate = d => { if(!d) return ""; const p=String(d).slice(0,10).split("-"); return p.length===3 ? p[1]+"-"+p[2]+"-"+p[0].slice(2) : d; };
+const fmtDateTime = (ts, fallback) => { if(!ts) return fallback?fmtDate(fallback):""; try { const d=new Date(ts); const date=d.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'2-digit',day:'2-digit',year:'2-digit'}).replace(/\//g,'-'); const time=d.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'}); return date+" · "+time+" PT"; } catch(e){ return fallback?fmtDate(fallback):""; } };
+const fmtPhone = v => { const d=(v||"").replace(/\D/g,""); if(d.length===10) return d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6); if(d.length===11 && d[0]==="1") return d.slice(1,4)+"-"+d.slice(4,7)+"-"+d.slice(7); return v; };
+const dateShortcut = key => { const d=new Date(); if(key==="tomorrow") d.setDate(d.getDate()+1); else if(key==="week") d.setDate(d.getDate()+7); else if(key==="2weeks") d.setDate(d.getDate()+14); else if(key==="month") d.setMonth(d.getMonth()+1); return d.toISOString().slice(0,10); };
+const dateChips = target => `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${[["tomorrow","Tomorrow"],["week","Next week"],["2weeks","2 weeks"],["month","Next month"]].map(([k,l])=>`<button type="button" class="datechip" data-dateset="${target}" data-datekey="${k}">${l}</button>`).join("")}</div>`;
+const fmtClock = ts => { try { return new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); } catch(e){ return ""; } };
+const stLabel = s => s==="No action needed" ? "Closed" : s;
+const pill = st => `<span class="pill" style="${STATUS_STYLE[st]||STATUS_STYLE.New}">${esc(stLabel(st))}</span>`;
+
+// Quick actions: one tap = status + today's date + auto follow-up date + a logged note.
+const bizDays = (from,n) => { const d=new Date(from); let a=0; while(a<n){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0&&w!==6)a++; } return d.toISOString().slice(0,10); };
+const QUICK = {
+  vm:{status:"Contacted",note:"Left a voicemail",follow:2},
+  email:{status:"Contacted",note:"Sent an email",follow:2},
+  text:{status:"Contacted",note:"Sent a text",follow:2},
+  stopped:{status:"Contacted",note:"Stopped by — customer unavailable",follow:2},
+  won:{status:"Won",note:"Marked won",follow:0},
+  lost:{status:"Lost",note:"Marked lost",follow:0},
+  close:{status:"No action needed",note:"Closed — no further action",follow:0},
+};
+async function quick(r,key){
+  const q=QUICK[key]; if(!r||!q) return;
+  if((key==="lost"||key==="close") && !confirm((key==="lost"?"Mark "+r.customer_name+" as Lost?":"Close "+r.customer_name+"?")+" This ends the lead.")) return;
+  const patch={ status:q.status, first_touched_at:r.first_touched_at||today(), last_action_date:today() };
+  patch.next_follow_up = q.follow>0 ? bizDays(today(),q.follow) : null;
+  S.busy=true; render();
+  try{
+    await sbPatch("cp_requests","id=eq."+r.id,patch);
+    await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:q.status,note:q.note,author:S.persona.name});
+    toast(q.note+" — saved."); S.busy=false; await load();
+  }catch(e){ toast("Couldn't save. Try again.",false); S.busy=false; render(); }
+}
+async function assignSelf(r){
+  if(!r) return;
+  const st = r.status==="New" ? "Assigned" : r.status;
+  S.busy=true; render();
+  try{
+    await sbPatch("cp_requests","id=eq."+r.id,{ assigned_to:S.persona.name, status:st, first_touched_at:r.first_touched_at||today(), last_action_date:today() });
+    await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:st,note:"Picked up by "+S.persona.name,author:S.persona.name});
+    toast("Assigned to you."); S.busy=false; await load();
+  }catch(e){ toast("Couldn't assign. Try again.",false); S.busy=false; render(); }
+}
+async function assignLead(r, value){
+  if(!r) return;
+  const st = (r.status==="New" && value!=="Unassigned") ? "Assigned" : r.status;
+  S.busy=true; render();
+  try{
+    await sbPatch("cp_requests","id=eq."+r.id,{ assigned_to:value, status:st, first_touched_at:r.first_touched_at||(st!=="New"?today():null), last_action_date:today() });
+    toast(value==="Unassigned"?"Set to unassigned.":"Owner set to "+value+"."); S.busy=false; await load();
+  }catch(e){ toast("Couldn't reassign. Try again.",false); S.busy=false; render(); }
+}
+async function deleteCard(r){
+  if(!r || S.persona.type!=="admin") return;
+  if(!confirm("Delete “"+r.customer_name+"” permanently?\n\nThis removes the card and its entire touch history, and can't be undone.")) return;
+  S.busy=true; render();
+  try{
+    await sbDelete("cp_requests","id=eq."+r.id);
+    toast("Card deleted."); S.selectedId=null; S.busy=false; await load();
+  }catch(e){ toast("Couldn't delete — check admin permissions.",false); S.busy=false; render(); }
+}
+
+// Print the currently-showing follow-up list as a clean sheet (respects Mine/Everyone + status filter).
+function printSheet(){
+  const p=S.persona, f=S.filter;
+  let list=S.rows.filter(r=> f==="All"?true : f==="Open"?OPEN_STATUSES.includes(r.status) : f==="Closed"?!OPEN_STATUSES.includes(r.status) : r.status===f);
+  list=list.filter(inScope);
+  list=list.slice().sort((a,b)=>((a.next_follow_up||"9999-99-99")<(b.next_follow_up||"9999-99-99")?-1:1));
+  const showWho=S.scope==="everyone";
+  const rowsHtml=list.map(r=>{
+    const od=r.next_follow_up&&r.next_follow_up<today()&&OPEN_STATUSES.includes(r.status);
+    return `<tr>
+      <td class="chk">&#9744;</td>
+      <td><b>${esc(r.customer_name)}</b><div class="sub">${esc(r.branch)}${showWho?' · '+esc(r.assigned_to):''}</div></td>
+      <td>${esc(r.phone||r.email||'—')}</td>
+      <td>${esc(r.status)}</td>
+      <td class="${od?'od':''}">${r.next_follow_up?esc(fmtDate(r.next_follow_up))+(od?' (overdue)':''):'—'}</td>
+      <td>${esc(r.follow_up_topic||r.public_summary||'')}</td>
+    </tr>`;
+  }).join("");
+  const title=(S.scope==="mine"?esc(p.name)+" — ":S.scope==="unassigned"?"Unassigned — ":"Team — ")+esc(f)+" follow-ups";
+  const css="body{font-family:system-ui,-apple-system,sans-serif;margin:28px;color:#111}h1{font-size:18px;margin:0 0 2px}.m{color:#666;font-size:12px;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;border-bottom:2px solid #111;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em}td{border-bottom:1px solid #ddd;padding:9px 8px;vertical-align:top}.chk{font-size:18px;width:22px}.sub{color:#666;font-size:11px;margin-top:2px}.od{color:#c00;font-weight:bold}.empty{color:#666;font-style:italic;margin-top:20px}@media print{body{margin:0}}";
+  const table=list.length? `<table><thead><tr><th>Done</th><th>Customer</th><th>Phone / email</th><th>Status</th><th>Follow-up</th><th>Topic</th></tr></thead><tbody>${rowsHtml}</tbody></table>` : `<div class="empty">Nothing to print for this view.</div>`;
+  const w=window.open("","_blank");
+  if(!w){ toast("Allow pop-ups to print the sheet.",false); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${css}</style></head><body><h1>${title}</h1><div class="m">Printed ${today()} · ${list.length} item${list.length===1?'':'s'}</div>${table}<scr`+`ipt>window.onload=function(){window.print();}</scr`+`ipt></body></html>`);
+  w.document.close();
+}
+
+// Manager <-> Sales thread: private, timestamped, two-way. Not shown to submitters.
+function threadCard(r){
+  const list = commentsFor(r.id);
+  const isMgr = S.persona.type==="manager" || S.persona.type==="admin";
+  const thread = list.length ? list.map(c=>{
+    const mgr = isMgrNote(c);
+    const init = (c.author||"?").trim().charAt(0).toUpperCase();
+    return `<div class="cmt">
+      <div class="av ${mgr?'mgr':'sales'}">${esc(init)}</div>
+      <div><div class="tiny"><b>${esc(c.author)}</b> <span class="rb ${mgr?'mgr':''}">${mgr?'Manager':'Sales'}</span> <span class="muted">${esc(fmtTs(c.created_at))}</span></div>
+      <div class="cbody">${esc(c.body)}</div></div>
+    </div>`;
+  }).join("") : `<div class="tiny muted" style="font-style:italic;margin-bottom:12px">No manager notes yet.${isMgr?" Drop a suggestion or request for the salesperson below.":""}</div>`;
+  return `<div class="card" id="mgr-thread" style="margin-top:20px">
+    <h2 style="font-size:16px;font-weight:700;margin:0 0 4px">Manager notes</h2>
+    <div class="tiny muted" style="margin-bottom:14px">Private coaching from management to sales — the submitter never sees this.</div>
+    ${thread}
+    ${isMgr ? `<div style="margin-top:8px">
+      <textarea id="c_body" style="min-height:64px" placeholder="Add a suggestion or request for the salesperson…"></textarea>
+      <button class="btn" id="c_post" style="margin-top:10px" ${S.busy?'disabled':''}>${S.busy?'Posting…':'Post note'}</button>
+    </div>` : `<div class="tiny muted" style="font-style:italic;margin-top:8px">Only managers can post here — if you have an update, log it as a touch.</div>`}
+  </div>`;
+}
+async function postComment(){
+  const r = S.rows.find(x=>x.id===S.selectedId); if(!r) return;
+  if(S.persona.type!=="manager" && S.persona.type!=="admin"){ toast("Only managers can post notes here.",false); return; }
+  const body = document.getElementById("c_body").value.trim();
+  if(!body){ toast("Type a comment first.",false); return; }
+  S.busy=true; render();
+  try{
+    await sbPost("cp_comments",{ request_id:r.id, author:S.persona.name, author_role:S.persona.type, body });
+    toast("Comment posted."); S.busy=false; await load();
+  }catch(e){ toast("Couldn't post. Did you run the comments SQL?",false); S.busy=false; render(); }
+}
+
+// ---- Render root ------------------------------------------------------
+function render() {
+  const p = S.persona;
+  const accent = accentFor(p.type);
+  document.documentElement.style.setProperty('--accent', accent);
+  const tabs = [
+    { id:"submit", label:"Submit a Request", icon:I.send, show:true },
+    { id:"mine", label:"My Submissions", icon:I.clip, show:true },
+    { id:"sales", label:"Sales Dashboard", icon:I.dash, show:p.type!=="employee" },
+    { id:"manager", label:"Manager View", icon:I.chart, show:p.type==="manager"||p.type==="admin" },
+  ].filter(t=>t.show);
+
+  const conn = S.conn==="live"
+    ? `<span class="conn live"><span class="cdot"></span>Live</span>${S.lastSync?`<span style="font-size:11px;margin-left:6px;color:#94a3b8">synced ${fmtClock(S.lastSync)}</span>`:''}`
+    : S.conn==="off" ? '<span class="conn off"><span class="cdot"></span>Offline</span>'
+    : '<span class="conn">Connecting…</span>';
+
+  let body = "";
+  if (S.rows === null) body = '<div class="loading">Connecting to Supabase…</div>';
+  else if (S.tab==="submit") body = viewSubmit();
+  else if (S.tab==="mine") body = S.selectedId ? viewEmployeeDetail() : viewMine();
+  else if (S.tab==="sales") body = S.selectedId ? viewSalesDetail() : viewSales();
+  else if (S.tab==="manager") body = viewManager();
+
+  document.getElementById("root").innerHTML = `
+    <header>
+      <div style="height:4px;background:${accent}"></div>
+      <div class="wrap hrow">
+        <div class="brand">
+          <div class="logo">${I.activity}</div>
+          <div><div class="title">Customer Pulse</div>
+          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="view-as">Viewing as</span>
+          <div class="personas">
+            ${PERSONAS.map(x=>{const on=x.id===p.id;return `<button data-persona="${x.id}" class="${on?"active":""}"${on?` style="background:${accentFor(x.type)};color:#fff"`:""}>${x.name}</button>`;}).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="wrap"><div class="tabs">
+        ${tabs.map(t=>`<button data-tab="${t.id}" class="${t.id===S.tab?"active":""}">${t.icon}${t.label}</button>`).join("")}
+      </div></div>
+    </header>
+    <main><div class="wrap">${body}</div></main>`;
+  bind();
+  if(S._focus){ const el=document.getElementById(S._focus); if(el){ el.focus(); try{ const L=el.value.length; el.setSelectionRange(L,L); }catch(e){} } S._focus=null; }
+}
+
+// ---- Views ------------------------------------------------------------
+function opts(arr, sel){ return arr.map(o=>`<option ${o===sel?"selected":""}>${esc(o)}</option>`).join(""); }
+// Sales can't pick "New" (it's the counter's opening state). If a record is still New,
+// The detailed touch form only advances in-progress statuses. Won/Lost/Close
+// happen via quick actions, so they're not selectable here — but if a lead is
+// already at one of those (or New), we show it as a locked "current" marker.
+function statusOptions(current){
+  const forward = ["Assigned","Contacted","Visited","Quote pending","Needs more info"];
+  const head = forward.includes(current) ? "" : `<option value="${esc(current)}" selected disabled>${esc(stLabel(current))} (current)</option>`;
+  return head + forward.map(s=>`<option ${s===current?"selected":""}>${esc(s)}</option>`).join("");
+}
+
+function viewSubmit() {
+  const emp = S.persona.type==="employee";
+  const FIELD_STATUSES = ["Contacted","Visited","Quote pending","Needs more info","Won"];
+  const mode = emp ? "counter" : (S.submitMode||"field");
+
+  const basicCard = (field) => `
+    <div class="card">
+      <div class="grid2">
+        <label class="f"><span class="lbl">Customer name <span class="req">*</span></span><input id="s_customer" placeholder="e.g. Coastline Mechanical"/></label>
+        <label class="f"><span class="lbl">Account # (if known)</span><input id="s_account" placeholder="Optional"/></label>
+        <label class="f"><span class="lbl">Contact name</span><input id="s_contact" placeholder="Who to ask for"/></label>
+        <label class="f"><span class="lbl">Phone <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_phone" placeholder="e.g. 562-555-0142"/></label>
+        <label class="f"><span class="lbl">Email <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_email" type="email" placeholder="e.g. name@company.com"/></label>
+        <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="s_branch">${opts(BRANCHES)}</select></label>
+        <label class="f"><span class="lbl">${field?"Type of contact":"Suggested action"} <span class="req">*</span></span><select id="s_action">${opts(ACTIONS, field?"Visit":undefined)}</select></label>
+        <label class="f"><span class="lbl">Reason / category <span class="req">*</span></span><select id="s_category">${opts(CATEGORIES)}</select></label>
+        <label class="f"><span class="lbl">Urgency <span class="req">*</span></span><select id="s_urgency">${opts(URGENCY,"Medium")}</select></label>
+        ${field?`<label class="f"><span class="lbl">Current status <span class="req">*</span></span><select id="s_status">${opts(FIELD_STATUSES,"Visited")}</select></label>
+        <label class="f"><span class="lbl">Next follow-up <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="s_next"/>${dateChips("s_next")}</label>`:""}
+      </div>
+      <label class="f" style="margin-top:16px"><span class="lbl">${field?"What happened on the call?":"What's going on?"} <span class="req">*</span></span><textarea id="s_reason" placeholder="${field?"What you discussed, what they need, how it went.":"Tell sales what you heard or saw. Plain language is fine."}"></textarea></label>
+      ${field?`<label class="f" style="margin-top:12px"><span class="lbl">Follow-up topic <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_topic" placeholder="The specific thing to raise next time"/></label>`:""}
+      <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
+        <span class="tiny muted">${field?`Logging as <b style="color:#475569">${esc(S.persona.name)}</b> — assigned to you`:`Submitting as <b style="color:#475569">${esc(S.persona.name)}</b>`}</span>
+        <button class="btn" id="s_submit">${I.send} ${S.busy?(field?"Logging…":"Submitting…"):(field?"Log call":"Submit request")}</button>
+      </div>
+    </div>`;
+
+  const recurringCard = () => `
+    <div class="card">
+      <div class="grid2">
+        <label class="f"><span class="lbl">Customer name <span class="req">*</span></span><input id="r_customer" placeholder="e.g. Coastline Mechanical"/></label>
+        <label class="f"><span class="lbl">Account # (if known)</span><input id="r_account" placeholder="Optional"/></label>
+        <label class="f"><span class="lbl">Contact name</span><input id="r_contact" placeholder="Who to ask for"/></label>
+        <label class="f"><span class="lbl">Phone</span><input id="r_phone" placeholder="e.g. 562-555-0142"/></label>
+        <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="r_branch">${opts(BRANCHES)}</select></label>
+        <label class="f"><span class="lbl">Assign to <span class="req">*</span></span><select id="r_assigned">${assigneeOptions(S.persona.name)}</select></label>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <label class="f"><span class="lbl">Visit every <span class="req">*</span></span><div style="display:flex;gap:8px"><input type="number" id="r_cadval" value="4" min="1" style="max-width:90px"/><select id="r_cadunit">${opts(["weeks","months"],"weeks")}</select></div></label>
+        <label class="f"><span class="lbl">First visit due <span class="req">*</span></span><input type="date" id="r_first"/>${dateChips("r_first")}</label>
+      </div>
+      <label class="f" style="margin-top:16px"><span class="lbl">What should happen on each visit? <span class="req">*</span></span><textarea id="r_note" placeholder="e.g. Check stock levels, touch base with the buyer, walk the counter."></textarea></label>
+      <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
+        <span class="tiny muted">A fresh card lands on the rep's board each cycle when it's due.</span>
+        <button class="btn" id="r_submit">${I.send} ${S.busy?"Scheduling…":"Schedule visits"}</button>
+      </div>
+    </div>`;
+
+  const projectCard = () => `
+    <div class="card">
+      <div class="grid2">
+        <label class="f"><span class="lbl">Project / customer name <span class="req">*</span></span><input id="p_customer" placeholder="e.g. Harbor Medical Center build"/></label>
+        <label class="f"><span class="lbl">Account # (if known)</span><input id="p_account" placeholder="Optional"/></label>
+        <label class="f"><span class="lbl">Site contact</span><input id="p_contact" placeholder="Contact / GC"/></label>
+        <label class="f"><span class="lbl">Phone</span><input id="p_phone" placeholder="e.g. 562-555-0142"/></label>
+        <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="p_branch">${opts(BRANCHES)}</select></label>
+        <label class="f"><span class="lbl">Assign to <span class="req">*</span></span><select id="p_assigned">${assigneeOptions(S.persona.name)}</select></label>
+      </div>
+      <label class="f" style="margin-top:16px"><span class="lbl">What are we monitoring? <span class="req">*</span></span><textarea id="p_reason" placeholder="Scope of the job, what to keep an eye on, who's involved."></textarea></label>
+      <label class="f" style="margin-top:12px"><span class="lbl">First visit date <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="p_next"/>${dateChips("p_next")}</label>
+      <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
+        <span class="tiny muted">Creates an open project card the owner visits and tracks over time.</span>
+        <button class="btn" id="p_submit">${I.send} ${S.busy?"Creating…":"Create project"}</button>
+      </div>
+    </div>`;
+
+  const titles = {
+    counter:["Customer Sales Call Request","You see things sales never hears. If someone should get a call or a visit, send it here — it gets tracked, and you can watch what happens."],
+    field:["Log a field call","Just called or visited a customer? Capture it here — it runs through the same pipeline, assigned to you and ready to follow up."],
+    recurring:["Schedule a recurring visit","Set a customer to be visited on a repeating cadence. A fresh card appears on the assigned rep's board each time it's due."],
+    project:["Set up a project to monitor","Create a long-running project card — the assigned rep visits and logs touches against it over the life of the job."]
+  };
+  const [title,sub]=titles[mode];
+  const selector = emp ? "" : `<div class="modeseg">
+    <button data-submode="field" class="${mode==='field'?'active':''}">Field call</button>
+    <button data-submode="recurring" class="${mode==='recurring'?'active':''}">Recurring visit</button>
+    <button data-submode="project" class="${mode==='project'?'active':''}">Project</button>
+  </div>`;
+  const card = mode==="recurring"?recurringCard() : mode==="project"?projectCard() : basicCard(mode==="field");
+
+  return `
+  <div style="max-width:680px">
+    <div style="margin-bottom:16px">
+      <h1 class="page">${title}</h1>
+      <p class="muted" style="font-size:14px;margin:6px 0 0">${sub}</p>
+    </div>
+    ${selector}
+    ${card}
+  </div>`;
+}
+
+function listItem(r, sales) {
+  const age = days(r.submitted_at, today());
+  const stale = sales && OPEN_STATUSES.includes(r.status) && age>5;
+  return `<button class="item" data-open="${r.id}" style="border-left:4px solid ${stageColor(r.status)}">
+    <div style="min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="cust">${esc(r.customer_name)}</span>${pill(r.status)}
+        ${sales?`<span class="urg"><span class="udot" style="background:${r.urgency==='High'?'#f43f5e':r.urgency==='Medium'?'#f59e0b':'#94a3b8'}"></span>${esc(r.urgency)}</span>`:""}
+        ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
+        ${r.source==='Field call'?`<span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:1px 7px;border-radius:999px">Field call</span>`:""}
+        ${sales && commentsFor(r.id).some(isMgrNote)?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
+      </div>
+      <div class="meta">
+        <span>${I.bldg}${esc(r.branch)}</span>
+        <span>${esc(r.category)}${sales && r.source!=='Field call'?` · wants: ${esc(r.suggested_action)}`:""}</span>
+        ${sales?`<span>by ${esc(r.submitted_by)}</span><span class="muted">${r.assigned_to==='Unassigned'?'unassigned':'→ '+esc(r.assigned_to)}</span>`:`<span>${I.clock}Submitted ${esc(relDay(r.submitted_at))}</span>`}
+      </div>
+      ${!sales && r.public_summary?`<div class="tiny muted" style="margin-top:6px;font-style:italic">“${esc(r.public_summary)}”</div>`:""}
+    </div>
+    <span class="chev">${I.chev}</span>
+  </button>`;
+}
+
+const sourceBadge = r =>
+  r.source==='Field call' ? `<span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:1px 8px;border-radius:999px">Field call</span>`
+  : r.source==='Project' ? `<span style="font-size:11px;font-weight:600;color:#6d28d9;background:#ede9fe;padding:1px 8px;border-radius:999px">Project</span>`
+  : r.source==='Recurring visit' ? `<span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px">Recurring visit</span>`
+  : `<span style="font-size:11px;font-weight:600;color:#b91c1c;background:#fee2e2;padding:1px 8px;border-radius:999px">Sales call request</span>`;
+function subCard(r){
+  const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
+  return `<button class="subcard${hi?' hipri':''}" data-open="${r.id}" style="border-top:4px solid ${stageColor(r.status)}">
+    <div class="cn">${esc(r.customer_name)}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">${pill(r.status)} ${sourceBadge(r)} ${hi?`<span class="hiflag">High priority</span>`:""}</div>
+    <div class="kv"><b>Submitted by:</b> ${esc(r.submitted_by)}</div>
+    <div class="kv"><b>Rep:</b> ${r.assigned_to==='Unassigned'?'Unassigned':esc(r.assigned_to)}</div>
+    <div class="kv"><b>Action:</b> ${esc(r.suggested_action)}</div>
+    <div class="rsn">${esc(r.reason)}</div>
+  </button>`;
+}
+function salesCard(r){
+  const age=days(r.submitted_at,today());
+  const stale=OPEN_STATUSES.includes(r.status)&&age>5;
+  const hasNote=commentsFor(r.id).some(isMgrNote);
+  const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
+  return `<button class="subcard${hi?' hipri':''}" data-open="${r.id}" style="border-top:4px solid ${stageColor(r.status)}">
+    <div class="cn">${esc(r.customer_name)}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
+      ${pill(r.status)}
+      <span class="urg"><span class="udot" style="background:${r.urgency==='High'?'#f43f5e':r.urgency==='Medium'?'#f59e0b':'#94a3b8'}"></span>${esc(r.urgency)}</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px">
+      ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
+      ${sourceBadge(r)}
+      ${hasNote?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
+    </div>
+    <div class="kv"><b>Rep:</b> ${r.assigned_to==='Unassigned'?'Unassigned':esc(r.assigned_to)}</div>
+    <div class="kv"><b>Submitted by:</b> ${esc(r.submitted_by)} · ${fmtDate(r.submitted_at)}</div>
+    <div class="kv"><b>${esc(r.category)}</b>${r.source!=='Field call'?` · ${esc(r.suggested_action)}`:''}</div>
+    <div class="rsn">${esc(r.reason)}</div>
+  </button>`;
+}
+
+function viewMine() {
+  const isEmp = S.persona.type==="employee";
+  const everyone = !isEmp && S.subScope==="everyone";
+  const base = everyone ? S.rows : S.rows.filter(r=>r.submitted_by===S.persona.name);
+  const mf = S.mineFilter;
+  let list = base.filter(r => mf==="All"?true : mf==="Open"?OPEN_STATUSES.includes(r.status) : !OPEN_STATUSES.includes(r.status));
+  if(S.search) list = list.filter(r=>matchSearch(r,S.search));
+  list = sortList(list);
+  const heading = everyone ? "All submissions" : "My submissions";
+  const emptyMsg = S.search
+    ? empty(I.search,"No matches","Nothing matches “"+esc(S.search)+"”. Try fewer letters, or clear the search.")
+    : base.length>0
+      ? empty(I.clip, mf==="Closed"?"Nothing closed yet":"Nothing open right now","Try a different filter above to see the rest.")
+      : empty(I.clip,"Nothing here yet", isEmp
+          ? "Spot a customer worth a call? Tap “Submit a Request” — it'll land right here so you can watch what happens."
+          : "Field calls you log show up here. Head to “Log a field call” to add one — or flip to Everyone to see the whole board.");
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <h1 class="page">${heading}</h1>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        ${isEmp?"":`<div class="filters"><button data-subscope="mine" class="${S.subScope==='mine'?'active':''}">Mine</button><button data-subscope="everyone" class="${S.subScope==='everyone'?'active':''}">Everyone</button></div>`}
+        <div class="filters">${["Open","All","Closed"].map(x=>`<button data-minefilter="${x}" class="${x===mf?'active':''}">${x}</button>`).join("")}</div>
+        ${sortSelect()}
+        <span class="muted tiny">${list.length}</span>
+      </div>
+    </div>
+    ${searchBar("Search by customer or account…")}
+    ${list.length===0 ? emptyMsg : `<div class="cardgrid">${list.map(subCard).join("")}</div>`}`;
+}
+
+function viewEmployeeDetail() {
+  const r = S.rows.find(x=>x.id===S.selectedId); if(!r) return viewMine();
+  const steps = ["New","Assigned","Contacted","Won"];
+  const idx = r.status==="Lost"?3:(steps.indexOf(r.status)>=0?steps.indexOf(r.status):0);
+  const track = steps.map((st,i)=>{
+    const on = i<=idx;
+    const lost = r.status==="Lost" && i===3;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <div style="width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;background:${on?(lost?'#f43f5e':'#22c55e'):'#e2e8f0'}">${on?'&#10003;':i+1}</div>
+      <span class="tiny muted" style="text-align:center">${lost?'Closed':st}</span>
+    </div>${i<steps.length-1?`<div style="height:2px;flex:1;background:${i<idx?'#4ade80':'#e2e8f0'}"></div>`:''}`;
+  }).join("");
+  return `
+    <div style="max-width:680px">
+      <button class="backlink" data-back="mine">← Back</button>
+      <div class="card" style="border-left:4px solid ${stageColor(r.status)}">
+        <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:16px">
+          <div><h1 class="page" style="font-size:18px">${esc(r.customer_name)}</h1>
+          <div class="tiny muted" style="margin-top:4px">${esc(r.category)} · ${esc(r.branch)} · submitted ${esc(fmtDate(r.submitted_at))}</div></div>
+          ${pill(r.status)}
+        </div>
+        <div class="grid2" style="margin-bottom:20px">
+          <div class="info"><div class="k">Assigned to</div><div class="v">${r.assigned_to==='Unassigned'?'Not yet assigned':esc(r.assigned_to)}</div></div>
+          <div class="info"><div class="k">Last update</div><div class="v">${r.last_action_date?esc(fmtDate(r.last_action_date)):'—'}</div></div>
+        </div>
+        <div class="tiny" style="font-weight:600;color:#64748b;margin-bottom:8px">Progress updates <span class="muted" style="font-weight:400">— what sales has shared, newest first</span></div>
+        ${(()=>{ const pt=updatesFor(r.id).filter(u=>u.public_summary).reverse();
+          return pt.length?`<div class="stack" style="margin-bottom:20px">${pt.map(u=>`<div class="touch" style="border-left-color:#0d9488">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${pill(u.status)}<span class="tiny muted">${esc(fmtDateTime(u.created_at,u.update_date))}</span></div>
+            <div style="font-size:14px;color:#334155;margin-top:5px">${esc(u.public_summary)}</div>
+            ${u.products_discussed?`<div class="tbits"><span class="tbit">Products: ${esc(u.products_discussed)}</span></div>`:""}
+          </div>`).join("")}</div>`
+          :'<div class="softbox" style="margin-bottom:20px"><div style="font-size:14px;color:#64748b">Sales hasn\'t posted an update yet. You\'ll see progress here as it moves.</div></div>'; })()}
+        <div style="display:flex;align-items:center;gap:4px">${track}</div>
+        <div class="tiny muted" style="margin-top:20px">Sales keeps detailed working notes internally — you see the summary above.</div>
+      </div>
+    </div>`;
+}
+
+function viewSales() {
+  const f = S.filter;
+  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days" };
+  let list;
+  if(S.special){
+    list = S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
+    if(S.special==="unassigned") list=list.filter(r=>r.assigned_to==='Unassigned');
+    else if(S.special==="overdue") list=list.filter(r=>r.next_follow_up && r.next_follow_up < today());
+    else if(S.special==="aging") list=list.filter(r=>days(r.submitted_at,today())>5);
+  } else {
+    list = S.rows.filter(r => f==="All"?true : f==="Open"?OPEN_STATUSES.includes(r.status) : f==="Closed"?!OPEN_STATUSES.includes(r.status) : r.status===f);
+    list = list.filter(inScope);
+  }
+  if(S.search) list = list.filter(r=>matchSearch(r,S.search));
+  list = sortList(list);
+  const fs = ["Open","New","All","Closed","Won","Lost"];
+  const scopes = [["mine","Mine"],["unassigned","Unassigned"],["everyone","Everyone"]];
+  const emTitle = S.scope==='mine'?"You're all caught up":S.scope==='unassigned'?"No unclaimed leads":"Clean board";
+  const emSub = S.scope==='mine'?"Nothing assigned to you in this filter. Enjoy the quiet — or check Unassigned for something to grab."
+    :S.scope==='unassigned'?"No unassigned leads in this filter — the grab pile's empty."
+    :"No requests match this filter. Flip to All to see everything.";
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <h1 class="page">Sales follow-up dashboard</h1>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="filters">${scopes.map(([v,l])=>`<button data-scope="${v}" class="${S.scope===v?'active':''}">${l}</button>`).join("")}</div>
+        <div class="filters">${fs.map(x=>`<button data-filter="${x}" class="${x===f?'active':''}">${x}</button>`).join("")}</div>
+        ${sortSelect()}
+        <button class="qbtn" data-print="1">${I.printer}Print</button>
+      </div>
+    </div>
+    ${searchBar("Search customer, account, or salesperson…")}
+    ${S.special?`<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;margin-bottom:12px"><span class="tiny" style="font-weight:600;color:#1e40af">Filtered from Manager view: ${SPECIAL[S.special]||S.special} (${list.length})</span><button class="linkish" data-clearspecial style="margin-left:auto">Clear ✕</button></div>`:""}
+    ${stageLegend()}
+    ${list.length===0
+      ? (S.search
+          ? empty(I.search,"No matches","Nothing matches “"+esc(S.search)+"”. Try fewer letters, or clear the search.")
+          : empty(I.dash, emTitle, emSub))
+      : `<div class="cardgrid">${list.map(salesCard).join("")}</div>`}`;
+}
+
+function viewSalesDetail() {
+  const r = S.rows.find(x=>x.id===S.selectedId); if(!r) return viewSales();
+  const ups = updatesFor(r.id);
+  const hist = customerHistory(r);
+  const mgrNotes = commentsFor(r.id).filter(isMgrNote);
+  const latestMgr = mgrNotes.length ? mgrNotes[mgrNotes.length-1] : null;
+  return `
+  <button class="backlink" data-back="sales">← Back to dashboard</button>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 14px">
+    ${hist.length?`<button class="linkish" data-scroll="cust-history">↓ ${hist.length} prior call${hist.length===1?'':'s'} — jump to customer history</button>`:""}
+  </div>
+  ${latestMgr?`<div class="mgrbanner">
+    <div class="tiny" style="font-weight:700;color:#9f1239;display:flex;align-items:center;gap:6px">Note from ${esc(latestMgr.author)} (Manager) · ${esc(fmtDateTime(latestMgr.created_at))}</div>
+    <div style="font-size:14px;color:#334155;margin-top:4px">${esc(latestMgr.body)}</div>
+    <button class="linkish" data-scroll="mgr-thread" style="margin-top:6px;color:#9f1239">↓ Reply in the thread</button>
+  </div>`:""}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="detailgrid">
+    <div>
+      <div class="card" style="border-left:4px solid ${stageColor(r.status)}">
+        <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:12px">
+          <div><h1 class="page" style="font-size:18px">${esc(r.customer_name)}</h1>
+          <div class="tiny muted" style="margin-top:4px">${r.account_number?`Acct ${esc(r.account_number)} · `:""}${esc(r.contact_name||'no contact')} · ${esc(r.phone||'no phone')}${r.email?` · ${esc(r.email)}`:""}</div></div>
+          ${pill(r.status)}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 12px;background:#f8fafc;border:1px solid #eef2f6;border-radius:10px">
+          <span class="tiny" style="font-weight:600;color:#475569">Owner</span>
+          <select data-assign-lead class="sortsel" ${S.busy?'disabled':''}>${assigneeOptions(r.assigned_to)}</select>
+          <span class="tiny muted">— this lead's assigned rep</span>
+        </div>
+        <div class="grid2" style="gap:8px;margin-bottom:16px">
+          ${info("Branch",r.branch)}${info("Category",r.category)}
+          ${info("Wants",r.suggested_action)}${info("Urgency",r.urgency)}
+          ${info("Submitted by",r.submitted_by+" · "+fmtDate(r.submitted_at))}${info("Age",days(r.submitted_at,today())+" days")}
+        </div>
+        <div class="softbox" style="margin-bottom:16px">
+          <div class="tiny" style="color:#64748b;margin-bottom:4px">What the counter flagged</div>
+          <div style="font-size:14px;color:#334155">${esc(r.reason)}</div>
+        </div>
+        <div class="tiny" style="font-weight:600;color:#64748b;margin-bottom:8px">Touch history <span class="muted" style="font-weight:400">— every logged interaction, newest first (internal)</span></div>
+        ${ups.length===0?'<div class="tiny muted" style="font-style:italic">No touches yet. Log the first one on the right.</div>':`<div class="stack tscroll">${[...ups].reverse().map(touchTimeline).join("")}</div>`}
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px;background:#f0f6ff;border-color:#dbeafe">
+        <div style="font-size:13px;font-weight:600;color:#1e40af;margin-bottom:10px">Quick actions <span class="tiny muted" style="font-weight:400">— one tap, stamps today &amp; sets the next follow-up</span></div>
+        <div class="qrow">
+          ${r.assigned_to==='Unassigned' ? `<button class="qbtn assign" data-assign="1" ${S.busy?'disabled':''}>I've got this</button>` : ""}
+          <button class="qbtn" data-quick="vm" ${S.busy?'disabled':''}>Left voicemail</button>
+          <button class="qbtn" data-quick="email" ${S.busy?'disabled':''}>Sent email</button>
+          <button class="qbtn" data-quick="text" ${S.busy?'disabled':''}>Sent text</button>
+          <button class="qbtn" data-quick="stopped" ${S.busy?'disabled':''}>Stopped by / unavailable</button>
+          <button class="qbtn won" data-quick="won" ${S.busy?'disabled':''}>Won</button>
+          <button class="qbtn lost" data-quick="lost" ${S.busy?'disabled':''}>Lost</button>
+          <button class="qbtn" data-quick="close" ${S.busy?'disabled':''}>Close</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:16px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:var(--accent);display:inline-flex">${I.plus}</span> Log a touch</h2>
+        <div class="tiny muted" style="margin-bottom:14px">Each save adds a new entry to the timeline — it never overwrites an earlier one.</div>
+        <div class="fsection fs-touch">
+          <div class="fsection-h"><span class="fsdot" style="background:#2563eb"></span>The touch</div>
+          <div class="grid2">
+            <label class="f"><span class="lbl">Touch type <span style="color:#94a3b8;font-weight:400">— sets the stage</span></span><select id="u_type">${opts(TOUCH_TYPES,"Call")}</select></label>
+            <label class="f"><span class="lbl">Next follow-up</span><input type="date" id="u_next" value="${esc(r.next_follow_up||'')}"/>${dateChips("u_next")}</label>
+          </div>
+        </div>
+        <div class="fsection fs-covered">
+          <div class="fsection-h"><span class="fsdot" style="background:#0d9488"></span>What was covered</div>
+          <label class="f"><span class="lbl">Products / lines discussed</span><input id="u_products" placeholder="e.g. Copeland compressors, RTU units"/></label>
+          <label class="f" style="margin-top:12px"><span class="lbl">Information covered</span><input id="u_topic" placeholder="What you went over on this touch"/></label>
+        </div>
+        <div class="fsection fs-money" style="position:relative;overflow:hidden">
+          <div class="fsection-h"><span class="fsdot" style="background:#16a34a"></span>Quotes &amp; orders</div>
+          <div class="grid2" style="opacity:.45;pointer-events:none;filter:grayscale(.3)">
+            <label class="f"><span class="lbl">Quote #</span><input id="u_quoteno" placeholder="Optional" disabled/></label>
+            <label class="f"><span class="lbl">Quoted $</span><input type="number" id="u_quoted" placeholder="0" disabled/></label>
+            <label class="f"><span class="lbl">Order / PO #</span><input id="u_orderno" placeholder="Optional" disabled/></label>
+            <label class="f"><span class="lbl">Ordered $</span><input type="number" id="u_ordered" placeholder="0" disabled/></label>
+          </div>
+          <div class="wm-progress"><span>In progress</span></div>
+        </div>
+        <div class="fsection fs-notes">
+          <div class="fsection-h"><span class="fsdot" style="background:#d97706"></span>Notes</div>
+          <label class="f"><span class="lbl">Internal comments <span style="color:#94a3b8;font-weight:400">— sales only</span></span><textarea id="u_note" style="min-height:70px" placeholder="What happened on this touch. Stays between sales."></textarea></label>
+          <label class="f" style="margin-top:12px"><span class="lbl">Public summary <span style="color:#94a3b8;font-weight:400">— the submitter sees this</span></span><textarea id="u_public" style="min-height:70px" placeholder="e.g. Reached out and set a meeting for next week to walk through the RTU options."></textarea></label>
+        </div>
+        <button class="btn block" id="u_save" style="margin-top:16px" ${S.busy?'disabled':''}>${S.busy?'Logging…':'Log touch'}</button>
+      </div>
+    </div>
+  </div>
+  ${historyCard(r)}
+  ${threadCard(r)}
+  ${S.persona.type==="admin"?`<div style="margin-top:20px;display:flex;justify-content:flex-end"><button class="btn-del" data-delete="1" ${S.busy?'disabled':''}>Delete this card</button></div>`:""}
+  <style>@media(max-width:820px){.detailgrid{grid-template-columns:1fr!important}}</style>`;
+}
+
+function info(k,v){ return `<div class="info"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`; }
+function touchTimeline(u){
+  const bits=[];
+  if(u.products_discussed) bits.push(`<span class="tbit">Products: ${esc(u.products_discussed)}</span>`);
+  if(u.quote_number||Number(u.quoted_value)) bits.push(`<span class="tbit">Quote ${esc(u.quote_number||'')}${Number(u.quoted_value)?' · $'+Number(u.quoted_value).toLocaleString():''}</span>`);
+  if(u.order_number||Number(u.ordered_value)) bits.push(`<span class="tbit">Order ${esc(u.order_number||'')}${Number(u.ordered_value)?' · $'+Number(u.ordered_value).toLocaleString():''}</span>`);
+  if(u.follow_up_topic) bits.push(`<span class="tbit">Covered: ${esc(u.follow_up_topic)}</span>`);
+  if(u.contact_type){
+    return `<div class="touch">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="ttype">${esc(u.contact_type)}</span>${u.status?pill(u.status):""}
+        <span class="tiny muted">${esc(fmtDateTime(u.created_at,u.update_date))}${u.author?' · '+esc(u.author):''}</span>
+      </div>
+      ${u.note?`<div style="font-size:14px;color:#334155;margin-top:5px">${esc(u.note)}</div>`:""}
+      ${bits.length?`<div class="tbits">${bits.join("")}</div>`:""}
+      ${u.public_summary?`<div class="tiny" style="margin-top:6px;color:#64748b"><b>Shared with customer:</b> ${esc(u.public_summary)}</div>`:""}
+    </div>`;
+  }
+  return `<div class="note"><div class="tiny muted" style="display:flex;align-items:center;gap:8px">${esc(fmtDateTime(u.created_at,u.update_date))} ${u.status?pill(u.status):""}</div><div style="font-size:13px;color:#475569;margin-top:2px">${esc(u.note||'')}</div></div>`;
+}
+function empty(icon,t,b){ return `<div class="empty">${icon}<div style="font-weight:600;color:#334155;margin-top:12px">${t}</div><div class="tiny muted" style="margin-top:4px">${b}</div></div>`; }
+
+function viewManager() {
+  const rows = S.rows;
+  const open = rows.filter(r=>OPEN_STATUSES.includes(r.status));
+  const won = rows.filter(r=>r.status==="Won");
+  const openIds = new Set(open.map(r=>r.id));
+  const pipeline = S.updates.filter(u=>openIds.has(u.request_id)).reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
+  const touched = rows.filter(r=>r.first_touched_at);
+  const avg = touched.length?(touched.reduce((s,r)=>s+days(r.submitted_at,r.first_touched_at),0)/touched.length).toFixed(1):"—";
+  const byBranch = BRANCHES.map(b=>({b,n:rows.filter(r=>r.branch===b).length}));
+  const maxB = Math.max(1,...byBranch.map(x=>x.n));
+  const aging = open.map(r=>({...r,age:days(r.submitted_at,today())})).sort((a,b)=>b.age-a.age);
+  const repeats = Object.entries(rows.reduce((m,r)=>{const k=r.customer_name.toLowerCase();m[k]=(m[k]||0)+1;return m;},{})).filter(([,n])=>n>1);
+  const unassigned = open.filter(r=>r.assigned_to==='Unassigned').length;
+  const overdue = open.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
+  const aging5 = open.filter(r=>days(r.submitted_at,today())>5).length;
+  const attn=(n,label,sub,jump)=>{const good=n===0;return good
+    ? `<div class="attncard ok"><div class="an">${n}</div><div class="al">${label}</div><div class="as">all clear</div></div>`
+    : `<div class="attncard bad" data-mgr-jump="${jump}" style="cursor:pointer"><div class="an">${n}</div><div class="al">${label}</div><div class="as">${sub}</div><div class="tiny" style="margin-top:6px;font-weight:600;opacity:.85">View →</div></div>`;};
+  const allClear = unassigned===0 && overdue===0 && aging5===0;
+  const quotedTotal = S.updates.reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
+  const orderedTotal = S.updates.reduce((s,u)=>s+(Number(u.ordered_value)||0),0);
+  const hitRate = quotedTotal>0 ? Math.round(orderedTotal/quotedTotal*100)+"%" : "—";
+  const money = n => "$"+Math.round(n/1000)+"k";
+  const fromField = rows.filter(r=>r.source==='Field call').length;
+  const fromCounter = rows.length - fromField;
+  const stat=(k,v,s,color)=>`<div class="card stat"><div class="k">${k}</div><div class="v" style="${color||''}">${v}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h1 class="page">Manager view</h1>
+      <button class="filters" data-refresh style="border:1px solid #e2e8f0;padding:6px 12px;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:#fff">${I.refresh} Refresh</button>
+    </div>
+    <div style="margin-bottom:8px;display:flex;align-items:baseline;gap:8px">
+      <span style="font-size:13px;font-weight:600;color:#334155">Needs attention right now</span>
+      ${allClear?'<span class="tiny" style="color:#16a34a;font-weight:600">— board is healthy</span>':'<span class="tiny muted">— zero across the board means a healthy shop</span>'}
+    </div>
+    <div class="attn">
+      ${attn(unassigned,"Unassigned","nobody owns these yet","unassigned")}
+      ${attn(overdue,"Overdue follow-ups","the promised date has passed","overdue")}
+      ${attn(aging5,"Aging 5+ days","open and sitting too long","aging")}
+    </div>
+    <div class="stats" style="margin-bottom:20px">
+      ${stat("Total submitted",rows.length)}
+      ${stat("Open items",open.length,"",open.length>3?"color:#d97706":"")}
+      ${stat("Won",won.length,"","color:#16a34a")}
+      ${stat("Avg response",avg==="—"?"—":avg+"d","submit → first touch")}
+      ${stat("Live pipeline","$"+Math.round(pipeline/1000)+"k","quoted on open leads")}
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#334155;margin:0 0 8px">Deal flow</div>
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+      ${stat("Quoted",money(quotedTotal),"total value quoted")}
+      ${stat("Ordered",money(orderedTotal),"total value booked","color:#16a34a")}
+      ${stat("Quote → order",hitRate,"of quoted $ converted")}
+    </div>
+    <div class="grid2" style="gap:20px">
+      <div class="card">
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.bldg}</span> Submissions by branch</h2>
+        <div class="stack">${byBranch.map(({b,n})=>`<div style="display:flex;align-items:center;gap:12px"><span class="tiny" style="width:96px;color:#475569">${b}</span><div class="bar"><div style="width:${(n/maxB)*100}%;min-width:${n?28:0}px">${n||""}</div></div></div>`).join("")}</div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9">
+          <h3 style="font-size:14px;font-weight:600;color:#334155;margin:0 0 8px;display:flex;align-items:center;gap:6px"><span style="color:#94a3b8;display:inline-flex">${I.trend}</span>Repeat customers</h3>
+          ${repeats.length===0?'<p class="tiny muted" style="margin:0">No customer flagged more than once yet. When they are, they show here — that\'s your early-warning list.</p>':
+            `<div class="stack" style="--x:0">${repeats.map(([n,c])=>`<div style="display:flex;justify-content:space-between;font-size:14px;color:#475569"><span style="text-transform:capitalize">${esc(n)}</span><span style="color:#e11d48;font-weight:500">${c}×</span></div>`).join("")}</div>`}
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
+          <h3 style="font-size:14px;font-weight:600;color:#334155;margin:0 0 10px">Where leads come from</h3>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;background:#fef2f4;border:1px solid #fde2e5;border-radius:10px;padding:10px 12px"><div style="font-size:20px;font-weight:700;color:#0f172a">${fromCounter}</div><div class="tiny muted">from the counter</div></div>
+            <div style="flex:1;background:#eff4ff;border:1px solid #dbeafe;border-radius:10px;padding:10px 12px"><div style="font-size:20px;font-weight:700;color:#0f172a">${fromField}</div><div class="tiny muted">from the field</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.clock}</span> Open items, oldest first</h2>
+        ${aging.length===0?'<p class="muted" style="font-size:14px">Nothing open. Clean board.</p>':
+          `<div>${aging.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f8fafc">
+            <div style="min-width:0"><div style="font-size:14px;font-weight:500;color:#334155">${esc(r.customer_name)}</div><div class="tiny muted">${esc(r.branch)} · ${r.assigned_to==='Unassigned'?'unassigned':esc(r.assigned_to)}${(r.next_follow_up&&r.next_follow_up<today())?' · <span style="color:#e11d48;font-weight:600">follow-up overdue</span>':''}</div></div>
+            <div style="display:flex;align-items:center;gap:8px">${pill(r.status)}<span style="font-size:12px;font-weight:600;width:44px;text-align:right;color:${r.age>5?'#e11d48':'#94a3b8'}">${r.age}d</span></div>
+          </div>`).join("")}</div>`}
+        <p class="tiny muted" style="margin-top:12px">Anything red has been sitting more than 5 days. That's the "someone should call them" pile — now it's visible.</p>
+      </div>
+      ${(()=>{ const act=(S.recurring||[]).filter(s=>s.active); return act.length?`
+      <div class="card">
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 4px">Recurring visits</h2>
+        <div class="tiny muted" style="margin-bottom:14px">Active schedules — a fresh card lands on the rep's board each cycle when it's due.</div>
+        ${act.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f8fafc">
+          <div style="min-width:0"><div style="font-size:14px;font-weight:600;color:#334155">${esc(s.customer_name)} <span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px;margin-left:4px">every ${esc(s.cadence_value)} ${esc(s.cadence_unit)}</span></div>
+          <div class="tiny muted">${esc(s.assigned_to||'Unassigned')} · ${esc(s.branch||'')} · next due ${fmtDate(s.next_due)}</div></div>
+          <button class="linkish" data-recur-off="${s.id}" style="color:#dc2626">Stop</button>
+        </div>`).join("")}
+      </div>`:""; })()}
+    </div>`;
+}
+
+// ---- Events -----------------------------------------------------------
+function bind() {
+  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=PERSONAS.find(p=>p.id===b.dataset.persona); S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=S.persona.type==="sales"?"mine":"everyone"; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; render(); });
+  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
+  const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
+  const qc=document.querySelector("[data-clearsearch]"); if(qc) qc.onclick=()=>{ S.search=""; S._focus="q_search"; render(); };
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ S.selectedId=b.dataset.open; render(); });
+  document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>{ S.selectedId=null; render(); });
+  document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{ S.filter=b.dataset.filter; S.special=null; render(); });
+  document.querySelectorAll("[data-minefilter]").forEach(b=>b.onclick=()=>{ S.mineFilter=b.dataset.minefilter; render(); });
+  document.querySelectorAll("[data-subscope]").forEach(b=>b.onclick=()=>{ S.subScope=b.dataset.subscope; render(); });
+  const so=document.querySelector("[data-sort]"); if(so) so.onchange=()=>{ S.sort=so.value; render(); };
+  const rf=document.querySelector("[data-refresh]"); if(rf) rf.onclick=()=>{ load(); toast("Refreshed from database."); };
+  document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>quick(S.rows.find(x=>x.id===S.selectedId), b.dataset.quick));
+  document.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ S.scope=b.dataset.scope; S.special=null; render(); });
+  const pr=document.querySelector("[data-print]"); if(pr) pr.onclick=printSheet;
+  const cpost=document.getElementById("c_post"); if(cpost) cpost.onclick=postComment;
+  const asg=document.querySelector("[data-assign]"); if(asg) asg.onclick=()=>assignSelf(S.rows.find(x=>x.id===S.selectedId));
+  const del=document.querySelector("[data-delete]"); if(del) del.onclick=()=>deleteCard(S.rows.find(x=>x.id===S.selectedId));
+  const al=document.querySelector("[data-assign-lead]"); if(al) al.onchange=()=>assignLead(S.rows.find(x=>x.id===S.selectedId), al.value);
+  const ph=document.getElementById("s_phone"); if(ph) ph.onblur=()=>{ ph.value=fmtPhone(ph.value); };
+  document.querySelectorAll("[data-dateset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.dateset); if(el) el.value=dateShortcut(b.dataset.datekey); });
+  document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.scroll); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); });
+  document.querySelectorAll("[data-mgr-jump]").forEach(b=>b.onclick=()=>{ S.special=b.dataset.mgrJump; S.tab="sales"; S.selectedId=null; S.scope="everyone"; render(); });
+  const cs=document.querySelector("[data-clearspecial]"); if(cs) cs.onclick=()=>{ S.special=null; render(); };
+  document.querySelectorAll("[data-recur-off]").forEach(b=>b.onclick=async()=>{
+    const s=(S.recurring||[]).find(x=>x.id===b.dataset.recurOff); if(!s) return;
+    if(!confirm("Stop the recurring visits for "+s.customer_name+"? Existing cards stay; no new ones will be created.")) return;
+    S.busy=true; render();
+    try{ await sbPatch("cp_recurring","id=eq."+s.id,{active:false}); toast("Recurring visits stopped."); S.busy=false; await load(); }
+    catch(e){ toast("Couldn't stop it. Try again.",false); S.busy=false; render(); }
+  });
+
+  const sb=document.getElementById("s_submit");
+  if(sb) sb.onclick=async()=>{
+    const g=id=>document.getElementById(id).value.trim();
+    const field=S.persona.type!=="employee";
+    const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category:document.getElementById("s_category").value, urgency:document.getElementById("s_urgency").value, reason:g("s_reason") };
+    if(!base.customer_name||!base.reason){ toast("Customer name and the details are required.",false); return; }
+    const payload = field
+      ? { ...base, source:"Field call", assigned_to:S.persona.name, status:document.getElementById("s_status").value, next_follow_up:document.getElementById("s_next").value||null, follow_up_topic:g("s_topic")||null, first_touched_at:today(), last_action_date:today() }
+      : { ...base, source:"Counter" };
+    S.busy=true; render();
+    try{
+      await sbPost("cp_requests",payload);
+      toast(field?"Field call logged — it's in your pipeline.":"Request submitted — sales can see it now.");
+      if(field){ S.tab="sales"; S.scope="mine"; } else { S.tab="mine"; }
+      S.busy=false; await load();
+    }catch(e){ toast(field?"Couldn't log the call. Try again.":"Submit failed. Try again.",false); S.busy=false; render(); }
+  };
+
+  document.querySelectorAll("[data-submode]").forEach(b=>b.onclick=()=>{ S.submitMode=b.dataset.submode; render(); });
+
+  const rb=document.getElementById("r_submit");
+  if(rb) rb.onclick=async()=>{
+    const g=id=>document.getElementById(id).value.trim();
+    const customer=g("r_customer"), first=document.getElementById("r_first").value, note=g("r_note");
+    if(!customer||!first||!note){ toast("Customer, first visit date, and the visit note are required.",false); return; }
+    const row={ customer_name:customer, account_number:g("r_account")||null, contact_name:g("r_contact")||null, phone:g("r_phone")||null,
+      branch:document.getElementById("r_branch").value, assigned_to:document.getElementById("r_assigned").value,
+      cadence_value:Number(document.getElementById("r_cadval").value)||4, cadence_unit:document.getElementById("r_cadunit").value,
+      next_due:first, note:note, active:true, created_by:S.persona.name };
+    S.busy=true; render();
+    try{ await sbPost("cp_recurring",row); toast("Recurring visits scheduled."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
+    catch(e){ toast("Couldn't schedule. Try again.",false); S.busy=false; render(); }
+  };
+
+  const pb=document.getElementById("p_submit");
+  if(pb) pb.onclick=async()=>{
+    const g=id=>document.getElementById(id).value.trim();
+    const customer=g("p_customer"), reason=g("p_reason"), assigned=document.getElementById("p_assigned").value;
+    if(!customer||!reason){ toast("Project name and what you're monitoring are required.",false); return; }
+    const payload={ submitted_by:S.persona.name, customer_name:customer, account_number:g("p_account")||null, contact_name:g("p_contact")||null, phone:g("p_phone")||null,
+      branch:document.getElementById("p_branch").value, suggested_action:"Visit", category:"Project", urgency:"Medium", reason:reason,
+      source:"Project", assigned_to:assigned, status:(assigned&&assigned!=="Unassigned")?"Assigned":"New",
+      next_follow_up:document.getElementById("p_next").value||null, first_touched_at:null, last_action_date:today() };
+    S.busy=true; render();
+    try{ await sbPost("cp_requests",payload); toast("Project created — it's on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
+    catch(e){ toast("Couldn't create the project. Try again.",false); S.busy=false; render(); }
+  };
+
+  const us=document.getElementById("u_save");
+  if(us) us.onclick=async()=>{
+    const r=S.rows.find(x=>x.id===S.selectedId);
+    const gv=id=>document.getElementById(id).value.trim();
+    const nv=id=>Number(document.getElementById(id).value)||0;
+    const type=document.getElementById("u_type").value;
+    const status=TOUCH_MAP[type]||r.status;
+    const note=gv("u_note");
+    const next=document.getElementById("u_next").value||null;
+    const pub=gv("u_public");
+    const products=gv("u_products")||null;
+    const topic=gv("u_topic")||null;
+    const quoteno=gv("u_quoteno")||null, quoted=nv("u_quoted");
+    const orderno=gv("u_orderno")||null, ordered=nv("u_ordered");
+    const first_touched_at=r.first_touched_at||today();
+    S.busy=true; render();
+    try{
+      // 1. append the touch (never overwrites earlier ones)
+      await sbPost("cp_updates",{ request_id:r.id, update_date:today(), contact_type:type, status, note:note||null, author:S.persona.name,
+        products_discussed:products, follow_up_topic:topic, quote_number:quoteno, quoted_value:quoted, order_number:orderno, ordered_value:ordered, public_summary:pub||null });
+      // 2. update the lead's current snapshot (ownership is set separately, at the lead level)
+      await sbPatch("cp_requests","id=eq."+r.id,{ status, next_follow_up:next,
+        ...(pub?{public_summary:pub}:{}), ...(products?{products_discussed:products}:{}), first_touched_at, last_action_date:today() });
+      toast("Touch logged."); S.busy=false; await load();
+    }catch(e){ toast("Couldn't log the touch. Try again.",false); S.busy=false; render(); }
+  };
+}
+
+load();
+</script>
+</body>
+</html>
