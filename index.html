@@ -227,6 +227,11 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"1.10", date:"2026-07-05", title:"Assignment tracking & fixes", items:[
+    "Assignments now appear in the touch history — who assigned it, and to whom",
+    "Submitters see a milestone when their lead gets picked up",
+    "Managers default to the whole team's open work on the dashboard and in Manager notes",
+    "Fixed project creation and recurring-visit cards that weren't saving" ]},
   { v:"1.9", date:"2026-07-03", title:"Manager-note reply loop", items:[
     "New Manager notes view on the Sales Dashboard — see which notes need a reply",
     "Reps can reply in the thread or tap “Mark as addressed”",
@@ -335,7 +340,7 @@ async function spawnDueVisits(){
       if(!already){
         await sbPost("cp_requests",{ submitted_by:s.created_by||"Recurring", branch:s.branch||BRANCHES[0],
           customer_name:s.customer_name, account_number:s.account_number||null, contact_name:s.contact_name||null, phone:s.phone||null,
-          category:"Recurring visit", urgency:"Medium", suggested_action:"Visit",
+          category:"Other", urgency:"Medium", suggested_action:"Visit",
           reason:s.note||("Recurring visit — every "+s.cadence_value+" "+s.cadence_unit),
           status:(s.assigned_to&&s.assigned_to!=="Unassigned")?"Assigned":"New", assigned_to:s.assigned_to||"Unassigned",
           next_follow_up:s.next_due, source:"Recurring visit", recurring_id:s.id, first_touched_at:null, last_action_date:today() });
@@ -477,16 +482,20 @@ async function assignSelf(r){
   S.busy=true; render();
   try{
     await sbPatch("cp_requests","id=eq."+r.id,{ assigned_to:S.persona.name, status:st, first_touched_at:r.first_touched_at||today(), last_action_date:today() });
-    await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:st,note:"Picked up by "+S.persona.name,author:S.persona.name});
+    await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:st,note:"Picked up this lead",author:S.persona.name,public_summary:S.persona.name+" picked this up and will be following up."});
     toast("Assigned to you."); S.busy=false; await load();
   }catch(e){ toast("Couldn't assign. Try again.",false); S.busy=false; render(); }
 }
 async function assignLead(r, value){
   if(!r) return;
   const st = (r.status==="New" && value!=="Unassigned") ? "Assigned" : r.status;
+  const who = S.persona.name;
+  const note = value==="Unassigned" ? "Unassigned this lead" : value===who ? "Assigned to self" : "Assigned to "+value;
+  const pub = value==="Unassigned" ? null : (value===who ? who+" picked this up and will be following up." : "Assigned to "+value+" — they'll be following up.");
   S.busy=true; render();
   try{
     await sbPatch("cp_requests","id=eq."+r.id,{ assigned_to:value, status:st, first_touched_at:r.first_touched_at||(st!=="New"?today():null), last_action_date:today() });
+    await sbPost("cp_updates",{ request_id:r.id, update_date:today(), status:st, note, author:who, public_summary:pub });
     toast(value==="Unassigned"?"Set to unassigned.":"Owner set to "+value+"."); S.busy=false; await load();
   }catch(e){ toast("Couldn't reassign. Try again.",false); S.busy=false; render(); }
 }
@@ -817,7 +826,7 @@ function salesCard(r){
 
 function viewNotes(){
   const nf=S.noteFilter||"needs";
-  const nscope=S.noteScope||"mine";
+  const nscope=S.noteScope || (S.persona.type==="sales"?"mine":"everyone");
   let data=cardsWithNotes();
   if(nscope==="mine") data=data.filter(x=>x.r.assigned_to===S.persona.name);
   if(nf==="needs") data=data.filter(x=>x.status==="needs");
@@ -1182,7 +1191,7 @@ function touchTimeline(u){
       ${u.public_summary?`<div class="tiny" style="margin-top:6px;color:#64748b"><b>Shared with customer:</b> ${esc(u.public_summary)}</div>`:""}
     </div>`;
   }
-  return `<div class="note"><div class="tiny muted" style="display:flex;align-items:center;gap:8px">${esc(fmtDateTime(u.created_at,u.update_date))} ${u.status?pill(u.status):""}</div><div style="font-size:13px;color:#475569;margin-top:2px">${esc(u.note||'')}</div></div>`;
+  return `<div class="note"><div class="tiny muted" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(fmtDateTime(u.created_at,u.update_date))} ${u.status?pill(u.status):""}${u.author?'<span>· '+esc(u.author)+'</span>':''}</div><div style="font-size:13px;color:#475569;margin-top:2px">${esc(u.note||'')}</div></div>`;
 }
 function empty(icon,t,b){ return `<div class="empty">${icon}<div style="font-weight:600;color:#334155;margin-top:12px">${t}</div><div class="tiny muted" style="margin-top:4px">${b}</div></div>`; }
 
@@ -1295,7 +1304,7 @@ function viewManager() {
 
 // ---- Events -----------------------------------------------------------
 function bind() {
-  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=PERSONAS.find(p=>p.id===b.dataset.persona); S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=S.persona.type==="sales"?"mine":"everyone"; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; render(); });
+  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=PERSONAS.find(p=>p.id===b.dataset.persona); S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=S.persona.type==="sales"?"mine":"everyone"; S.filter="Open"; S.special=null; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; render(); });
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
   const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
   const qc=document.querySelector("[data-clearsearch]"); if(qc) qc.onclick=()=>{ S.search=""; S._focus="q_search"; render(); };
@@ -1391,7 +1400,7 @@ function bind() {
     const customer=g("p_customer"), reason=g("p_reason"), assigned=document.getElementById("p_assigned").value;
     if(!customer||!reason){ toast("Project name and what you're monitoring are required.",false); return; }
     const payload={ submitted_by:S.persona.name, customer_name:customer, account_number:g("p_account")||null, contact_name:g("p_contact")||null, phone:g("p_phone")||null,
-      branch:document.getElementById("p_branch").value, suggested_action:"Visit", category:"Project", urgency:"Medium", reason:reason,
+      branch:document.getElementById("p_branch").value, suggested_action:"Visit", category:"Large job / project", urgency:"Medium", reason:reason,
       source:"Project", assigned_to:assigned, status:(assigned&&assigned!=="Unassigned")?"Assigned":"New",
       next_follow_up:document.getElementById("p_next").value||null, first_touched_at:null, last_action_date:today() };
     S.busy=true; render();
