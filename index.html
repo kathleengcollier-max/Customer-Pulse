@@ -227,6 +227,10 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"1.11", date:"2026-07-05", title:"Completion-driven recurring visits", items:[
+    "Recurring visits now advance when a rep taps “Complete visit” — the next one is scheduled from the completion date",
+    "A safety net still spawns a card if a schedule ever goes overdue with none open",
+    "The color legend now shows on the Calendar (month and day views), too" ]},
   { v:"1.10", date:"2026-07-05", title:"Assignment tracking & fixes", items:[
     "Assignments now appear in the touch history — who assigned it, and to whom",
     "Submitters see a milestone when their lead gets picked up",
@@ -331,28 +335,48 @@ function addCadence(dateStr, val, unit){
   else d.setDate(d.getDate()+n*7);
   return d.toISOString().slice(0,10);
 }
+async function spawnRecurringCard(s, due){
+  return sbPost("cp_requests",{ submitted_by:s.created_by||"Recurring", branch:s.branch||BRANCHES[0],
+    customer_name:s.customer_name, account_number:s.account_number||null, contact_name:s.contact_name||null, phone:s.phone||null,
+    category:"Other", urgency:"Medium", suggested_action:"Visit",
+    reason:s.note||("Recurring visit — every "+s.cadence_value+" "+s.cadence_unit),
+    status:(s.assigned_to&&s.assigned_to!=="Unassigned")?"Assigned":"New", assigned_to:s.assigned_to||"Unassigned",
+    next_follow_up:due, source:"Recurring visit", recurring_id:s.id, first_touched_at:null, last_action_date:today() });
+}
+// Safety net only: if an active schedule is overdue AND has no open card, spawn one.
+// The normal rhythm is driven by "Complete visit" (completeVisit), not this.
 async function spawnDueVisits(){
   try{
     const due=(S.recurring||[]).filter(s=>s.active && s.next_due && s.next_due<=today());
     if(!due.length) return;
+    let spawned=false;
     for(const s of due){
-      const already=(S.rows||[]).some(r=>r.recurring_id===s.id && r.next_follow_up===s.next_due);
-      if(!already){
-        await sbPost("cp_requests",{ submitted_by:s.created_by||"Recurring", branch:s.branch||BRANCHES[0],
-          customer_name:s.customer_name, account_number:s.account_number||null, contact_name:s.contact_name||null, phone:s.phone||null,
-          category:"Other", urgency:"Medium", suggested_action:"Visit",
-          reason:s.note||("Recurring visit — every "+s.cadence_value+" "+s.cadence_unit),
-          status:(s.assigned_to&&s.assigned_to!=="Unassigned")?"Assigned":"New", assigned_to:s.assigned_to||"Unassigned",
-          next_follow_up:s.next_due, source:"Recurring visit", recurring_id:s.id, first_touched_at:null, last_action_date:today() });
-      }
-      let nd=s.next_due, guard=0;
-      while(nd<=today() && guard<60){ nd=addCadence(nd,s.cadence_value,s.cadence_unit); guard++; }
-      await sbPatch("cp_recurring","id=eq."+s.id,{ next_due:nd });
+      const hasOpen=(S.rows||[]).some(r=>r.recurring_id===s.id && OPEN_STATUSES.includes(r.status));
+      if(hasOpen) continue;
+      await spawnRecurringCard(s, s.next_due); spawned=true;
     }
-    const [reqs,ups]=await Promise.all([ sbGet("cp_requests?select=*&order=submitted_at.desc"), sbGet("cp_updates?select=*&order=created_at.asc") ]);
-    S.rows=reqs; S.updates=ups;
-    S.recurring=await sbGet("cp_recurring?select=*&order=next_due.asc");
+    if(spawned){
+      const [reqs,ups]=await Promise.all([ sbGet("cp_requests?select=*&order=submitted_at.desc"), sbGet("cp_updates?select=*&order=created_at.asc") ]);
+      S.rows=reqs; S.updates=ups;
+      S.recurring=await sbGet("cp_recurring?select=*&order=next_due.asc");
+    }
   }catch(e){ /* never let spawning break a normal load */ }
+}
+async function completeVisit(r){
+  if(!r || r.source!=="Recurring visit") return;
+  const sched=(S.recurring||[]).find(s=>s.id===r.recurring_id);
+  const next=sched ? addCadence(today(), sched.cadence_value, sched.cadence_unit) : null;
+  if(!confirm("Mark this visit complete?"+(next&&sched&&sched.active?"\n\nThe next visit will be scheduled for "+fmtDate(next)+".":""))) return;
+  S.busy=true; render();
+  try{
+    await sbPatch("cp_requests","id=eq."+r.id,{ status:"No action needed", last_action_date:today() });
+    await sbPost("cp_updates",{ request_id:r.id, update_date:today(), status:"No action needed", note:"Recurring visit completed", author:S.persona.name, public_summary:"Visit completed." });
+    if(sched && sched.active && next){
+      await spawnRecurringCard(sched, next);
+      await sbPatch("cp_recurring","id=eq."+sched.id,{ next_due:next });
+    }
+    toast(next&&sched&&sched.active?("Visit done — next one set for "+fmtDate(next)+"."):"Visit completed."); S.selectedId=null; S.busy=false; await load();
+  }catch(e){ toast("Couldn't complete the visit. Try again.",false); S.busy=false; render(); }
 }
 async function load() {
   try {
@@ -378,6 +402,12 @@ const updatesFor = id => S.updates.filter(u => u.request_id === id);
 const commentsFor = id => (S.comments||[]).filter(c => c.request_id === id);
 const isMgrNote = c => c.author_role==='manager' || c.author_role==='admin';
 function latestMgrNote(id){ const m=commentsFor(id).filter(isMgrNote); return m.length?m[m.length-1]:null; }
+function latestMyNote(id, name){ const m=commentsFor(id).filter(c=>isMgrNote(c)&&c.author===name); return m.length?m[m.length-1]:null; }
+function myNoteStatus(id, name){ const cs=commentsFor(id); const mine=cs.filter(c=>isMgrNote(c)&&c.author===name); if(!mine.length) return null; const last=mine[mine.length-1]; return cs.some(c=>!isMgrNote(c)&&c.created_at>last.created_at)?"addressed":"needs"; }
+function managerNoteData(who, name){
+  if(who==="mine") return S.rows.map(r=>{ const s=myNoteStatus(r.id,name); return s?{r, status:s, last:latestMyNote(r.id,name)}:null; }).filter(Boolean);
+  return cardsWithNotes();
+}
 function noteStatus(id){ const cs=commentsFor(id); const m=cs.filter(isMgrNote); if(!m.length) return "none"; const last=m[m.length-1]; return cs.some(c=>!isMgrNote(c) && c.created_at>last.created_at) ? "addressed" : "needs"; }
 function cardsWithNotes(){ return S.rows.filter(r=>commentsFor(r.id).some(isMgrNote)).map(r=>({r, status:noteStatus(r.id), last:latestMgrNote(r.id)})); }
 function noteBadge(status, persp){ if(status==="needs") return persp==="sales"?`<span class="nb nb-need">Needs your reply</span>`:`<span class="nb nb-wait">Awaiting reply</span>`; return `<span class="nb nb-done">Replied</span>`; }
@@ -714,7 +744,7 @@ function viewSubmit() {
       </div>
       <label class="f" style="margin-top:16px"><span class="lbl">What should happen on each visit? <span class="req">*</span></span><textarea id="r_note" placeholder="e.g. Check stock levels, touch base with the buyer, walk the counter."></textarea></label>
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
-        <span class="tiny muted">A fresh card lands on the rep's board each cycle when it's due.</span>
+        <span class="tiny muted">The first card drops on the rep's board now. Completing a visit auto-schedules the next.</span>
         <button class="btn" id="r_submit">${I.send} ${S.busy?"Scheduling…":"Schedule visits"}</button>
       </div>
     </div>`;
@@ -740,7 +770,7 @@ function viewSubmit() {
   const titles = {
     counter:["Customer Sales Call Request","You see things sales never hears. If someone should get a call or a visit, send it here — it gets tracked, and you can watch what happens."],
     field:["Log a field call","Just called or visited a customer? Capture it here — it runs through the same pipeline, assigned to you and ready to follow up."],
-    recurring:["Schedule a recurring visit","Set a customer to be visited on a repeating cadence. A fresh card appears on the assigned rep's board each time it's due."],
+    recurring:["Schedule a recurring visit","Set a customer to be visited on a repeating cadence. The next visit is scheduled from the day the last one is completed."],
     project:["Set up a project to monitor","Create a long-running project card — the assigned rep visits and logs touches against it over the life of the job."]
   };
   const [title,sub]=titles[mode];
@@ -1018,6 +1048,7 @@ function viewCalendar(){
       <div class="tiny muted">${dayCards.length} card${dayCards.length===1?'':'s'} on this day — ${st==='open'?'by follow-up date':st==='completed'?'by completion date':'open & completed'}.</div>
       <button class="qbtn" data-printday="1">${I.printer}Print this day</button>
     </div>
+    ${stageLegend()}
     ${listHtml}`;
   }
 
@@ -1050,6 +1081,7 @@ function viewCalendar(){
     ${controls}
   </div>
   <div class="tiny muted" style="margin-bottom:10px">${total} card${total===1?'':'s'} shown — ${st==='open'?'placed by follow-up date':st==='completed'?'placed by completion date':'open by follow-up, completed by close date'}. Tap a day number for a printable day view.</div>
+  ${stageLegend()}
   <div class="calwrap"><div class="calgrid">
     ${dows.map(d=>`<div class="caldow">${d}</div>`).join("")}
     ${cells}
@@ -1120,6 +1152,7 @@ function viewSalesDetail() {
       </div>
     </div>
     <div>
+      ${r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) ? `<button class="btn block" data-complete-visit style="margin-bottom:16px;background:#0d9488" ${S.busy?'disabled':''}>✓ Complete visit &amp; schedule the next</button>` : ""}
       <div class="card" style="margin-bottom:16px;background:#f0f6ff;border-color:#dbeafe">
         <div style="font-size:13px;font-weight:600;color:#1e40af;margin-bottom:10px">Quick actions <span class="tiny muted" style="font-weight:400">— one tap, stamps today &amp; sets the next follow-up</span></div>
         <div class="qrow">
@@ -1275,24 +1308,25 @@ function viewManager() {
           </div>`).join("")}</div>`}
         <p class="tiny muted" style="margin-top:12px">Anything red has been sitting more than 5 days. That's the "someone should call them" pile — now it's visible.</p>
       </div>
-      ${(()=>{ const nf=S.mgrNoteFilter||"all"; let data=cardsWithNotes();
+      ${(()=>{ const who=S.mgrNoteWho||"mine"; const nf=S.mgrNoteFilter||"needs"; const name=S.persona.name;
+        let data=managerNoteData(who, name);
         const wait=data.filter(x=>x.status==="needs").length;
         if(nf==="needs") data=data.filter(x=>x.status==="needs"); else if(nf==="addressed") data=data.filter(x=>x.status==="addressed");
         data.sort((a,b)=> (a.status===b.status?0:a.status==="needs"?-1:1) || (b.last.created_at>a.last.created_at?1:-1));
+        const whoSeg=[["mine","My notes"],["all","All managers"]].map(([k,l])=>`<button data-mgrnotewho="${k}" class="${who===k?'active':''}">${l}</button>`).join("");
         const seg=[["needs","Awaiting reply"],["addressed","Replied"],["all","All"]].map(([k,l])=>`<button data-mgrnotefilter="${k}" class="${nf===k?'active':''}">${l}</button>`).join("");
-        if(!cardsWithNotes().length) return "";
         return `<div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-            <div><h2 style="font-size:16px;font-weight:600;margin:0">Manager notes — reply tracking</h2>
-            <div class="tiny muted" style="margin-top:2px">${wait} note${wait===1?'':'s'} still awaiting a reply from sales.</div></div>
-            <div class="modeseg">${seg}</div>
+            <div><h2 style="font-size:16px;font-weight:600;margin:0">Notes you're waiting on</h2>
+            <div class="tiny muted" style="margin-top:2px">${who==="mine"?`${wait} of your note${wait===1?'':'s'} still awaiting a reply from sales.`:`${wait} team note${wait===1?'':'s'} still awaiting a reply.`}</div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="modeseg">${whoSeg}</div><div class="modeseg">${seg}</div></div>
           </div>
-          ${data.length?`<div class="stack">${data.map(x=>noteRow(x,'manager')).join("")}</div>`:`<div class="tiny muted" style="font-style:italic;padding:16px 0">Nothing in this filter.</div>`}
+          ${data.length?`<div class="stack">${data.map(x=>noteRow(x,'manager')).join("")}</div>`:`<div class="tiny muted" style="font-style:italic;padding:16px 0">${who==="mine"&&nf==="needs"?"Nothing waiting on you — you're all caught up. 🎉":"Nothing in this filter."}</div>`}
         </div>`; })()}
       ${(()=>{ const act=(S.recurring||[]).filter(s=>s.active); return act.length?`
       <div class="card">
         <h2 style="font-size:16px;font-weight:600;margin:0 0 4px">Recurring visits</h2>
-        <div class="tiny muted" style="margin-bottom:14px">Active schedules — a fresh card lands on the rep's board each cycle when it's due.</div>
+        <div class="tiny muted" style="margin-bottom:14px">Active schedules — the next visit is scheduled when the rep completes the last one. “Next due” is the current target.</div>
         ${act.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f8fafc">
           <div style="min-width:0"><div style="font-size:14px;font-weight:600;color:#334155">${esc(s.customer_name)} <span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px;margin-left:4px">every ${esc(s.cadence_value)} ${esc(s.cadence_unit)}</span></div>
           <div class="tiny muted">${esc(s.assigned_to||'Unassigned')} · ${esc(s.branch||'')} · next due ${fmtDate(s.next_due)}</div></div>
@@ -1339,7 +1373,9 @@ function bind() {
   document.querySelectorAll("[data-notefilter]").forEach(b=>b.onclick=()=>{ S.noteFilter=b.dataset.notefilter; render(); });
   document.querySelectorAll("[data-notescope]").forEach(b=>b.onclick=()=>{ S.noteScope=b.dataset.notescope; render(); });
   document.querySelectorAll("[data-mgrnotefilter]").forEach(b=>b.onclick=()=>{ S.mgrNoteFilter=b.dataset.mgrnotefilter; render(); });
+  document.querySelectorAll("[data-mgrnotewho]").forEach(b=>b.onclick=()=>{ S.mgrNoteWho=b.dataset.mgrnotewho; render(); });
   document.querySelectorAll("[data-noteopen]").forEach(b=>b.onclick=()=>{ S.tab="sales"; S.selectedId=b.dataset.noteopen; render(); });
+  const cv=document.querySelector("[data-complete-visit]"); if(cv) cv.onclick=()=>completeVisit(S.rows.find(x=>x.id===S.selectedId));
   const ma=document.querySelector("[data-markaddressed]"); if(ma) ma.onclick=markAddressed;
   const cperson=document.querySelector("[data-calperson]"); if(cperson) cperson.onchange=()=>{ S.calPerson=cperson.value; render(); };
   const pr=document.querySelector("[data-print]"); if(pr) pr.onclick=printSheet;
@@ -1390,7 +1426,12 @@ function bind() {
       cadence_value:Number(document.getElementById("r_cadval").value)||4, cadence_unit:document.getElementById("r_cadunit").value,
       next_due:first, note:note, active:true, created_by:S.persona.name };
     S.busy=true; render();
-    try{ await sbPost("cp_recurring",row); toast("Recurring visits scheduled."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
+    try{
+      const res=await sbPost("cp_recurring",row);
+      const sched=Array.isArray(res)?res[0]:res;
+      if(sched) await spawnRecurringCard(sched, first);
+      toast("Recurring visit scheduled — first card is on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load();
+    }
     catch(e){ toast("Couldn't schedule. Try again.",false); S.busy=false; render(); }
   };
 
