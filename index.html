@@ -280,6 +280,7 @@ const SALESPEOPLE = ["Juan","Stephen","Lex","Unassigned"];
 const assigneeOptions = current => { const base=SALESPEOPLE.slice(); if(current && !base.includes(current)) base.unshift(current); return opts(base,current); };
 const STATUS_LIST = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost","No action needed","Needs more info"];
 const OPEN_STATUSES = ["New","Assigned","Contacted","Visited","Quote pending","Needs more info"];
+const isUpcomingVisit = r => r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) && r.next_follow_up && days(today(), r.next_follow_up) > 7;
 const STAGE_COLOR = { "New":"#0ea5e9","Assigned":"#6366f1","Contacted":"#f59e0b","Visited":"#14b8a6","Quote pending":"#8b5cf6","Won":"#10b981","Lost":"#f43f5e","No action needed":"#94a3b8","Needs more info":"#f97316" };
 const stageColor = s => STAGE_COLOR[s] || "#94a3b8";
 const STATUS_STYLE = {
@@ -845,6 +846,7 @@ function salesCard(r){
     <div style="display:flex;flex-wrap:wrap;gap:5px">
       ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
       ${sourceBadge(r)}
+      ${isUpcomingVisit(r)?`<span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:1px 8px;border-radius:999px">Scheduled · ${fmtDate(r.next_follow_up)}</span>`:""}
       ${hasNote?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
     </div>
     <div class="kv"><b>Rep:</b> ${r.assigned_to==='Unassigned'?'Unassigned':esc(r.assigned_to)}</div>
@@ -975,6 +977,7 @@ function viewSales() {
   }
   if(S.search) list = list.filter(r=>matchSearch(r,S.search));
   list = sortList(list);
+  list = [...list.filter(r=>!isUpcomingVisit(r)), ...list.filter(r=>isUpcomingVisit(r))];
   const fs = ["Open","New","All","Closed","Won","Lost"];
   const scopes = [["mine","Mine"],["unassigned","Unassigned"],["everyone","Everyone"]];
   const emTitle = S.scope==='mine'?"You're all caught up":S.scope==='unassigned'?"No unclaimed leads":"Clean board";
@@ -982,15 +985,15 @@ function viewSales() {
     :S.scope==='unassigned'?"No unassigned leads in this filter — the grab pile's empty."
     :"No requests match this filter. Flip to All to see everything.";
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:12px">
       <h1 class="page">Sales follow-up dashboard</h1>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        ${viewToggle}
-        <div class="filters">${scopes.map(([v,l])=>`<button data-scope="${v}" class="${S.scope===v?'active':''}">${l}</button>`).join("")}</div>
-        <div class="filters">${fs.map(x=>`<button data-filter="${x}" class="${x===f?'active':''}">${x}</button>`).join("")}</div>
-        ${sortSelect()}
-        <button class="qbtn" data-print="1">${I.printer}Print</button>
-      </div>
+      ${viewToggle}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="filters">${scopes.map(([v,l])=>`<button data-scope="${v}" class="${S.scope===v?'active':''}">${l}</button>`).join("")}</div>
+      <div class="filters">${fs.map(x=>`<button data-filter="${x}" class="${x===f?'active':''}">${x}</button>`).join("")}</div>
+      ${sortSelect()}
+      <button class="qbtn" data-print="1">${I.printer}Print</button>
     </div>
     ${searchBar("Search customer, account, or salesperson…")}
     ${S.special?`<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;margin-bottom:12px"><span class="tiny" style="font-weight:600;color:#1e40af">Filtered from Manager view: ${SPECIAL[S.special]||S.special} (${list.length})</span><button class="linkish" data-clearspecial style="margin-left:auto">Clear ✕</button></div>`:""}
@@ -1274,7 +1277,10 @@ function viewManager() {
       ${stat("Open items",open.length,"",open.length>3?"color:#d97706":"")}
       ${stat("Won",won.length,"","color:#16a34a")}
       ${stat("Avg response",avg==="—"?"—":avg+"d","submit → first touch")}
-      ${stat("Live pipeline","$"+Math.round(pipeline/1000)+"k","quoted on open leads")}
+      <div class="card stat" style="position:relative;overflow:hidden">
+        <div style="opacity:.4;filter:grayscale(.3)"><div class="k">Live pipeline</div><div class="v">$${Math.round(pipeline/1000)}k</div><div class="s">quoted on open leads</div></div>
+        <div class="wm-progress"><span style="font-size:12px;padding:3px 11px">In progress</span></div>
+      </div>
     </div>
     <div style="font-size:13px;font-weight:600;color:#334155;margin:0 0 8px">Deal flow</div>
     <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
