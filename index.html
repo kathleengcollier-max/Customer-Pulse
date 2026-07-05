@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Customer Pulse — internal sales-lead & field-call tracker for Legacy Group. Built and maintained by KGC. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -106,6 +107,43 @@
   .modeseg { display:inline-flex; gap:4px; background:#f1f5f9; border-radius:10px; padding:4px; margin-bottom:16px; flex-wrap:wrap; }
   .modeseg button { border:none; background:transparent; color:#475569; font-size:13px; font-weight:600; padding:7px 14px; border-radius:7px; cursor:pointer; }
   .modeseg button.active { background:#fff; color:var(--accent); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .calwrap { overflow-x:auto; }
+  .calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; min-width:720px; }
+  .caldow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; text-align:center; padding:2px 0 4px; }
+  .calcell { background:#fff; border:1px solid #eef2f6; border-radius:8px; min-height:100px; padding:6px; display:flex; flex-direction:column; gap:4px; }
+  .calcell.out { background:#f8fafc; border-color:#f1f5f9; }
+  .calcell.today { border-color:#93c5fd; box-shadow:0 0 0 1px #bfdbfe; }
+  .caldaynum { background:none; border:none; font-size:12px; font-weight:600; color:#64748b; cursor:pointer; padding:0; align-self:flex-start; }
+  .caldaynum:hover { color:#2563eb; text-decoration:underline; }
+  .calcell.today .caldaynum { color:#2563eb; }
+  .dayrow { display:flex; align-items:flex-start; gap:10px; width:100%; text-align:left; background:#fff; border:1px solid #eef2f6; border-left:3px solid #e2e8f0; border-radius:10px; padding:11px 13px; cursor:pointer; }
+  .dayrow:hover { background:#f8fafc; }
+  .dayrow .cdot { width:9px; height:9px; border-radius:3px; margin-top:5px; flex-shrink:0; }
+  .calchip { display:flex; align-items:center; gap:5px; font-size:11px; background:#f8fafc; border:1px solid #eef2f6; border-radius:5px; padding:3px 5px; cursor:pointer; text-align:left; width:100%; }
+  .calchip:hover { background:#f1f5f9; }
+  .calchip .cdot { width:7px; height:7px; border-radius:2px; flex-shrink:0; }
+  .calchip .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .verpill { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#cbd5e1; font-size:11px; font-weight:600; padding:2px 9px; border-radius:999px; cursor:pointer; margin-left:8px; }
+  .verpill:hover { background:rgba(255,255,255,.18); color:#fff; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex; align-items:center; justify-content:center; padding:20px; z-index:100; }
+  .modal { background:#fff; border-radius:16px; max-width:520px; width:100%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .modal-head { display:flex; justify-content:space-between; align-items:flex-start; padding:18px 20px 12px; border-bottom:1px solid #f1f5f9; }
+  .modal-x { background:none; border:none; font-size:18px; color:#94a3b8; cursor:pointer; padding:0; line-height:1; }
+  .modal-x:hover { color:#334155; }
+  .modal-body { padding:8px 20px; overflow-y:auto; }
+  .modal-foot { padding:12px 20px 18px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; }
+  .cl-entry { padding:14px 0; border-bottom:1px solid #f6f8fa; }
+  .cl-entry:last-child { border-bottom:none; }
+  .cl-ver { font-size:13px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .cl-new { font-size:10px; font-weight:700; color:#fff; background:var(--accent); padding:1px 7px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .cl-title { font-size:14px; font-weight:600; color:#334155; margin:3px 0 6px; }
+  .cl-items { margin:0; padding-left:18px; color:#475569; font-size:13px; }
+  .cl-items li { margin:3px 0; }
+  .nb { font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px; }
+  .nb-need { color:#9f1239; background:#fde2e5; }
+  .nb-wait { color:#92400e; background:#fef3c7; }
+  .nb-done { color:#166534; background:#dcfce7; }
+  .segcount { display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px; font-size:10px; font-weight:800; color:#fff; background:#e11d48; border-radius:999px; margin-left:5px; }
 
   .search { position:relative; margin-bottom:14px; max-width:380px; }
   .search input { width:100%; padding:9px 32px 9px 34px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; }
@@ -188,6 +226,42 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
+const CHANGELOG = [
+  { v:"1.9", date:"2026-07-03", title:"Manager-note reply loop", items:[
+    "New Manager notes view on the Sales Dashboard — see which notes need a reply",
+    "Reps can reply in the thread or tap “Mark as addressed”",
+    "Managers get a reply-tracking list showing which notes have been answered" ]},
+  { v:"1.8", date:"2026-07-03", title:"What's new & changelog", items:[
+    "This popup! A heads-up whenever a new version ships",
+    "A running changelog — click the version pill in the header anytime to see the full history" ]},
+  { v:"1.7", date:"2026-07-03", title:"Calendar & printable day sheets", items:[
+    "New Calendar view on the Sales Dashboard — see cards laid out by date",
+    "Month and Day views, filter by Open / Completed / All and by rep",
+    "“Print this day” route sheet with checkboxes for the field" ]},
+  { v:"1.6", title:"Manager-initiated cards", items:[
+    "Recurring visits — set a cadence and a fresh card appears each cycle",
+    "Projects — long-running cards to monitor over the life of a job",
+    "Manager panel to pause recurring schedules" ]},
+  { v:"1.5", title:"Attention & priority", items:[
+    "High-priority leads shaded rose so they stand out",
+    "“Sent text” quick action",
+    "Clickable manager stats that drill into filtered lists" ]},
+  { v:"1.4", title:"Manager notes", items:[
+    "Private manager-to-sales coaching notes (managers only)",
+    "A note banner surfaces the latest note at the top of a lead" ]},
+  { v:"1.3", title:"Touch history & transparency", items:[
+    "Per-touch history with Pacific-time stamps, newest first",
+    "Submitters see a running progress timeline on their submissions",
+    "Mobile-friendly forms and layout" ]},
+  { v:"1.2", title:"The touch model", items:[
+    "Every interaction logged as its own touch — nothing overwritten",
+    "Quick actions for fast, no-detail stamps" ]},
+  { v:"1.0", title:"Customer Pulse launch", items:[
+    "Counter requests and field calls in one shared pipeline",
+    "Roles: Counter, Sales, Manager, Admin",
+    "Live on Supabase" ]},
+];
+const APP_VERSION = CHANGELOG[0].v;
 const CATEGORIES = ["Lost customer","Buying elsewhere","Product question","Needs training","Bad experience","Large job / project","Competitor issue","Pricing concern","New business opportunity","Other"];
 const ACTIONS = ["Call","Visit","Quote follow-up","Other"];
 const TOUCH_MAP = { "Call":"Contacted","Visit":"Visited","Email":"Contacted","Quote":"Quote pending","Needs more info":"Needs more info","Other":"Contacted" };
@@ -298,6 +372,18 @@ function toast(msg, ok=true) {
 const updatesFor = id => S.updates.filter(u => u.request_id === id);
 const commentsFor = id => (S.comments||[]).filter(c => c.request_id === id);
 const isMgrNote = c => c.author_role==='manager' || c.author_role==='admin';
+function latestMgrNote(id){ const m=commentsFor(id).filter(isMgrNote); return m.length?m[m.length-1]:null; }
+function noteStatus(id){ const cs=commentsFor(id); const m=cs.filter(isMgrNote); if(!m.length) return "none"; const last=m[m.length-1]; return cs.some(c=>!isMgrNote(c) && c.created_at>last.created_at) ? "addressed" : "needs"; }
+function cardsWithNotes(){ return S.rows.filter(r=>commentsFor(r.id).some(isMgrNote)).map(r=>({r, status:noteStatus(r.id), last:latestMgrNote(r.id)})); }
+function noteBadge(status, persp){ if(status==="needs") return persp==="sales"?`<span class="nb nb-need">Needs your reply</span>`:`<span class="nb nb-wait">Awaiting reply</span>`; return `<span class="nb nb-done">Replied</span>`; }
+function noteRow(x, persp){ const {r,status,last}=x; return `<button class="dayrow" data-noteopen="${r.id}">
+    <span class="cdot" style="background:${stageColor(r.status)};margin-top:5px"></span>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-weight:600;font-size:14px;color:#0f172a">${esc(r.customer_name)}</span>${pill(r.status)} ${noteBadge(status,persp)}</div>
+      <div class="tiny" style="color:#475569;margin-top:3px"><b>${esc(last.author)}:</b> ${esc(last.body)}</div>
+      <div class="tiny muted" style="margin-top:2px">${esc(r.assigned_to||'Unassigned')} · ${esc(fmtDateTime(last.created_at))}</div>
+    </div>
+  </button>`; }
 const matchSearch = (r,q) => { if(!q) return true; q=q.toLowerCase(); return [r.customer_name,r.account_number,r.contact_name,r.assigned_to,r.branch].some(v=>(v||"").toLowerCase().includes(q)); };
 const inScope = r => S.scope==="everyone" ? true : S.scope==="unassigned" ? r.assigned_to==="Unassigned" : r.assigned_to===S.persona.name;
 const SORTS = [["newest","Newest first"],["oldest","Oldest first"],["az","Customer A–Z"],["followup","Follow-up (soonest)"],["urgency","Urgency (high first)"]];
@@ -444,7 +530,10 @@ function printSheet(){
 // Manager <-> Sales thread: private, timestamped, two-way. Not shown to submitters.
 function threadCard(r){
   const list = commentsFor(r.id);
-  const isMgr = S.persona.type==="manager" || S.persona.type==="admin";
+  const type=S.persona.type;
+  const isMgr = type==="manager" || type==="admin";
+  const canPost = isMgr || type==="sales";
+  const status = noteStatus(r.id);
   const thread = list.length ? list.map(c=>{
     const mgr = isMgrNote(c);
     const init = (c.author||"?").trim().charAt(0).toUpperCase();
@@ -456,27 +545,61 @@ function threadCard(r){
   }).join("") : `<div class="tiny muted" style="font-style:italic;margin-bottom:12px">No manager notes yet.${isMgr?" Drop a suggestion or request for the salesperson below.":""}</div>`;
   return `<div class="card" id="mgr-thread" style="margin-top:20px">
     <h2 style="font-size:16px;font-weight:700;margin:0 0 4px">Manager notes</h2>
-    <div class="tiny muted" style="margin-bottom:14px">Private coaching from management to sales — the submitter never sees this.</div>
+    <div class="tiny muted" style="margin-bottom:12px">Private between management and sales — the submitter never sees this.</div>
+    ${status!=="none"?`<div style="margin-bottom:12px">${noteBadge(status, isMgr?'manager':'sales')}</div>`:""}
     ${thread}
-    ${isMgr ? `<div style="margin-top:8px">
-      <textarea id="c_body" style="min-height:64px" placeholder="Add a suggestion or request for the salesperson…"></textarea>
-      <button class="btn" id="c_post" style="margin-top:10px" ${S.busy?'disabled':''}>${S.busy?'Posting…':'Post note'}</button>
-    </div>` : `<div class="tiny muted" style="font-style:italic;margin-top:8px">Only managers can post here — if you have an update, log it as a touch.</div>`}
+    ${canPost ? `<div style="margin-top:8px">
+      <textarea id="c_body" style="min-height:64px" placeholder="${isMgr?'Add a suggestion or request for the salesperson…':'Reply to the manager…'}"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn" id="c_post" ${S.busy?'disabled':''}>${S.busy?'Posting…':(isMgr?'Post note':'Reply')}</button>
+        ${(!isMgr && status==="needs")?`<button class="qbtn" data-markaddressed ${S.busy?'disabled':''}>✓ Mark as addressed</button>`:""}
+      </div>
+    </div>` : `<div class="tiny muted" style="font-style:italic;margin-top:8px">Log an update as a touch.</div>`}
   </div>`;
 }
 async function postComment(){
   const r = S.rows.find(x=>x.id===S.selectedId); if(!r) return;
-  if(S.persona.type!=="manager" && S.persona.type!=="admin"){ toast("Only managers can post notes here.",false); return; }
+  if(S.persona.type==="employee"){ toast("This thread is for sales and managers.",false); return; }
   const body = document.getElementById("c_body").value.trim();
-  if(!body){ toast("Type a comment first.",false); return; }
+  if(!body){ toast("Type something first.",false); return; }
   S.busy=true; render();
   try{
     await sbPost("cp_comments",{ request_id:r.id, author:S.persona.name, author_role:S.persona.type, body });
-    toast("Comment posted."); S.busy=false; await load();
+    toast(isMgrNote({author_role:S.persona.type})?"Note posted.":"Reply posted."); S.busy=false; await load();
   }catch(e){ toast("Couldn't post. Did you run the comments SQL?",false); S.busy=false; render(); }
+}
+async function markAddressed(){
+  const r = S.rows.find(x=>x.id===S.selectedId); if(!r) return;
+  S.busy=true; render();
+  try{
+    await sbPost("cp_comments",{ request_id:r.id, author:S.persona.name, author_role:S.persona.type, body:"✓ Addressed" });
+    toast("Marked as addressed."); S.busy=false; await load();
+  }catch(e){ toast("Couldn't update. Try again.",false); S.busy=false; render(); }
 }
 
 // ---- Render root ------------------------------------------------------
+function changelogModal(){
+  const latest=CHANGELOG[0];
+  return `<div class="modal-overlay" data-modal-overlay>
+    <div class="modal">
+      <div class="modal-head">
+        <div><div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em">What's new</div>
+        <h2 style="margin:2px 0 0;font-size:19px">Customer Pulse v${latest.v}</h2></div>
+        <button class="modal-x" data-modal-close title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        ${CHANGELOG.map((c,i)=>`<div class="cl-entry">
+          <div class="cl-ver">v${c.v}${i===0?' <span class="cl-new">Latest</span>':''}${c.date?` <span class="tiny muted" style="font-weight:400">· ${fmtDate(c.date)}</span>`:''}</div>
+          ${c.title?`<div class="cl-title">${esc(c.title)}</div>`:''}
+          <ul class="cl-items">${c.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+        </div>`).join("")}
+      </div>
+      <div class="modal-foot"><button class="btn" data-modal-close>Got it</button></div>
+    </div>
+  </div>`;
+}
+function openChangelog(){ S.showChangelog=true; render(); }
+function closeChangelog(){ S.showChangelog=false; try{ localStorage.setItem('cp_seen_version', APP_VERSION); }catch(e){} render(); }
 function render() {
   const p = S.persona;
   const accent = accentFor(p.type);
@@ -507,7 +630,7 @@ function render() {
         <div class="brand">
           <div class="logo">${I.activity}</div>
           <div><div class="title">Customer Pulse</div>
-          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}</div></div>
+          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button></div></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="view-as">Viewing as</span>
@@ -520,7 +643,8 @@ function render() {
         ${tabs.map(t=>`<button data-tab="${t.id}" class="${t.id===S.tab?"active":""}">${t.icon}${t.label}</button>`).join("")}
       </div></div>
     </header>
-    <main><div class="wrap">${body}</div></main>`;
+    <main><div class="wrap">${body}</div></main>
+    ${S.showChangelog?changelogModal():""}`;
   bind();
   if(S._focus){ const el=document.getElementById(S._focus); if(el){ el.focus(); try{ const L=el.value.length; el.setSelectionRange(L,L); }catch(e){} } S._focus=null; }
 }
@@ -691,6 +815,24 @@ function salesCard(r){
   </button>`;
 }
 
+function viewNotes(){
+  const nf=S.noteFilter||"needs";
+  const nscope=S.noteScope||"mine";
+  let data=cardsWithNotes();
+  if(nscope==="mine") data=data.filter(x=>x.r.assigned_to===S.persona.name);
+  if(nf==="needs") data=data.filter(x=>x.status==="needs");
+  else if(nf==="addressed") data=data.filter(x=>x.status==="addressed");
+  data.sort((a,b)=> (a.status===b.status?0:a.status==="needs"?-1:1) || (b.last.created_at>a.last.created_at?1:-1));
+  const seg=[["needs","Needs reply"],["addressed","Replied"],["all","All"]].map(([k,l])=>`<button data-notefilter="${k}" class="${nf===k?'active':''}">${l}</button>`).join("");
+  const scopeSeg=[["mine","Mine"],["everyone","Everyone"]].map(([k,l])=>`<button data-notescope="${k}" class="${nscope===k?'active':''}">${l}</button>`).join("");
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <div class="modeseg">${seg}</div>
+    <div class="modeseg">${scopeSeg}</div>
+  </div>
+  <div class="tiny muted" style="margin-bottom:10px">Manager notes on ${nscope==='mine'?'your':'all'} leads. “Needs reply” means the manager had the last word — reply or mark it addressed to close the loop.</div>
+  ${data.length?`<div class="stack">${data.map(x=>noteRow(x,'sales')).join("")}</div>`:`<div class="tiny muted" style="font-style:italic;padding:24px 0">Nothing here — you're all caught up. 🎉</div>`}`;
+}
 function viewMine() {
   const isEmp = S.persona.type==="employee";
   const everyone = !isEmp && S.subScope==="everyone";
@@ -761,6 +903,25 @@ function viewEmployeeDetail() {
 }
 
 function viewSales() {
+  const view = S.salesView || "cards";
+  const needsCount = cardsWithNotes().filter(x=>x.status==="needs" && x.r.assigned_to===S.persona.name).length;
+  const viewToggle = `<div class="modeseg"><button data-salesview="cards" class="${view==='cards'?'active':''}">Cards</button><button data-salesview="calendar" class="${view==='calendar'?'active':''}">Calendar</button><button data-salesview="notes" class="${view==='notes'?'active':''}">Manager notes${needsCount?`<span class="segcount">${needsCount}</span>`:''}</button></div>`;
+  if(view==="calendar"){
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <h1 class="page">Sales follow-up dashboard</h1>
+      ${viewToggle}
+    </div>
+    ${viewCalendar()}`;
+  }
+  if(view==="notes"){
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <h1 class="page">Sales follow-up dashboard</h1>
+      ${viewToggle}
+    </div>
+    ${viewNotes()}`;
+  }
   const f = S.filter;
   const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days" };
   let list;
@@ -785,6 +946,7 @@ function viewSales() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
       <h1 class="page">Sales follow-up dashboard</h1>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        ${viewToggle}
         <div class="filters">${scopes.map(([v,l])=>`<button data-scope="${v}" class="${S.scope===v?'active':''}">${l}</button>`).join("")}</div>
         <div class="filters">${fs.map(x=>`<button data-filter="${x}" class="${x===f?'active':''}">${x}</button>`).join("")}</div>
         ${sortSelect()}
@@ -799,6 +961,111 @@ function viewSales() {
           ? empty(I.search,"No matches","Nothing matches “"+esc(S.search)+"”. Try fewer letters, or clear the search.")
           : empty(I.dash, emTitle, emSub))
       : `<div class="cardgrid">${list.map(salesCard).join("")}</div>`}`;
+}
+
+function calDate(r){
+  const open = OPEN_STATUSES.includes(r.status);
+  if(open) return r.next_follow_up || r.submitted_at;
+  return r.last_action_date || r.next_follow_up || r.submitted_at;
+}
+function viewCalendar(){
+  const now=new Date();
+  if(S.calY==null){ S.calY=now.getFullYear(); S.calM=now.getMonth(); }
+  const view=S.calView||"month";
+  const st=S.calStatus||"open";
+  const person=S.calPerson||"Everyone";
+  const passes=r=>{ const open=OPEN_STATUSES.includes(r.status); if(st==="open"&&!open)return false; if(st==="completed"&&open)return false; if(person!=="Everyone"&&r.assigned_to!==person)return false; return true; };
+  const statusSeg=[["open","Open"],["completed","Completed"],["all","All"]].map(([k,l])=>`<button data-calstatus="${k}" class="${st===k?'active':''}">${l}</button>`).join("");
+  const people=["Everyone",...SALESPEOPLE.filter(p=>p!=="Unassigned"),"Unassigned"];
+  const personSel=`<select class="sortsel" data-calperson>${people.map(p=>`<option ${p===person?'selected':''}>${esc(p)}</option>`).join("")}</select>`;
+  const viewSeg=`<div class="modeseg"><button data-calview="month" class="${view==='month'?'active':''}">Month</button><button data-calview="day" class="${view==='day'?'active':''}">Day</button></div>`;
+  const controls=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${viewSeg}<div class="modeseg">${statusSeg}</div>${personSel}</div>`;
+
+  if(view==="day"){
+    if(!S.calDay) S.calDay=today();
+    const dayCards=S.rows.filter(passes).filter(r=>String(calDate(r)||"").slice(0,10)===S.calDay).sort((a,b)=>((a.assigned_to||"")<(b.assigned_to||"")?-1:1));
+    const label=new Date(S.calDay+"T00:00:00").toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const nav=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="qbtn" data-daynav="prev">‹ Prev</button>
+      <div style="font-weight:700;font-size:16px;min-width:200px;text-align:center">${label}</div>
+      <button class="qbtn" data-daynav="next">Next ›</button>
+      <button class="linkish" data-daynav="today" style="margin-left:4px">Today</button>
+    </div>`;
+    const listHtml = dayCards.length ? `<div class="stack">${dayCards.map(r=>`
+      <button class="dayrow" data-open="${r.id}">
+        <span class="cdot" style="background:${stageColor(r.status)}"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${esc(r.customer_name)} ${pill(r.status)} ${sourceBadge(r)}</div>
+          <div class="tiny muted" style="margin-top:3px">${esc(r.assigned_to||'Unassigned')} · ${esc(r.branch||'')}${r.phone?' · '+esc(r.phone):''}</div>
+          ${(r.follow_up_topic||r.public_summary||r.reason)?`<div class="tiny" style="color:#475569;margin-top:3px">${esc(r.follow_up_topic||r.public_summary||r.reason)}</div>`:""}
+        </div>
+      </button>`).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:20px 0">Nothing scheduled for this day in this filter.</div>`;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      ${nav}
+      ${controls}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+      <div class="tiny muted">${dayCards.length} card${dayCards.length===1?'':'s'} on this day — ${st==='open'?'by follow-up date':st==='completed'?'by completion date':'open & completed'}.</div>
+      <button class="qbtn" data-printday="1">${I.printer}Print this day</button>
+    </div>
+    ${listHtml}`;
+  }
+
+  const y=S.calY, m=S.calM;
+  const byDay={};
+  S.rows.filter(passes).forEach(r=>{ const d=calDate(r); if(!d) return; const dt=new Date(String(d).slice(0,10)+"T00:00:00"); if(dt.getFullYear()===y&&dt.getMonth()===m){ const day=dt.getDate(); (byDay[day]=byDay[day]||[]).push(r); } });
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const startDow=new Date(y,m,1).getDay();
+  const monthName=new Date(y,m,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const todayStr=today();
+  const dows=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  let cells="";
+  for(let i=0;i<startDow;i++) cells+=`<div class="calcell out"></div>`;
+  for(let day=1;day<=daysInMonth;day++){
+    const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const items=(byDay[day]||[]);
+    const chips=items.slice(0,4).map(r=>`<button class="calchip" data-open="${r.id}"><span class="cdot" style="background:${stageColor(r.status)}"></span><span class="nm">${esc(r.customer_name)}</span></button>`).join("");
+    const more=items.length>4?`<button class="linkish" data-calday="${iso}" style="font-size:11px;padding-left:2px">+${items.length-4} more</button>`:"";
+    cells+=`<div class="calcell${iso===todayStr?' today':''}"><button class="caldaynum" data-calday="${iso}" title="Open day view">${day}</button>${chips}${more}</div>`;
+  }
+  const total=Object.values(byDay).reduce((s,a)=>s+a.length,0);
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="qbtn" data-calnav="prev">‹ Prev</button>
+      <div style="font-weight:700;font-size:16px;min-width:150px;text-align:center">${monthName}</div>
+      <button class="qbtn" data-calnav="next">Next ›</button>
+      <button class="linkish" data-calnav="today" style="margin-left:4px">Today</button>
+    </div>
+    ${controls}
+  </div>
+  <div class="tiny muted" style="margin-bottom:10px">${total} card${total===1?'':'s'} shown — ${st==='open'?'placed by follow-up date':st==='completed'?'placed by completion date':'open by follow-up, completed by close date'}. Tap a day number for a printable day view.</div>
+  <div class="calwrap"><div class="calgrid">
+    ${dows.map(d=>`<div class="caldow">${d}</div>`).join("")}
+    ${cells}
+  </div></div>`;
+}
+function printDay(){
+  const st=S.calStatus||"open", person=S.calPerson||"Everyone", day=S.calDay||today();
+  const passes=r=>{ const open=OPEN_STATUSES.includes(r.status); if(st==="open"&&!open)return false; if(st==="completed"&&open)return false; if(person!=="Everyone"&&r.assigned_to!==person)return false; return true; };
+  const list=S.rows.filter(passes).filter(r=>String(calDate(r)||"").slice(0,10)===day).sort((a,b)=>((a.assigned_to||"")<(b.assigned_to||"")?-1:1));
+  const label=new Date(day+"T00:00:00").toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const rowsHtml=list.map(r=>`<tr>
+    <td class="chk">&#9744;</td>
+    <td><b>${esc(r.customer_name)}</b><div class="sub">${esc(r.branch||'')}${person==='Everyone'?' · '+esc(r.assigned_to||'Unassigned'):''}</div></td>
+    <td>${esc(r.phone||r.email||'—')}</td>
+    <td>${esc(stLabel(r.status))}</td>
+    <td>${esc(r.follow_up_topic||r.public_summary||r.reason||'')}</td>
+  </tr>`).join("");
+  const who = person==="Everyone" ? "Team" : esc(person);
+  const title=`${who} — ${label}`;
+  const css="body{font-family:system-ui,-apple-system,sans-serif;margin:28px;color:#111}h1{font-size:18px;margin:0 0 2px}.m{color:#666;font-size:12px;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;border-bottom:2px solid #111;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em}td{border-bottom:1px solid #ddd;padding:9px 8px;vertical-align:top}.chk{font-size:18px;width:22px}.sub{color:#666;font-size:11px;margin-top:2px}.empty{color:#666;font-style:italic;margin-top:20px}@media print{body{margin:0}}";
+  const table=list.length? `<table><thead><tr><th>Done</th><th>Customer</th><th>Phone / email</th><th>Status</th><th>What to do</th></tr></thead><tbody>${rowsHtml}</tbody></table>` : `<div class="empty">Nothing scheduled for this day.</div>`;
+  const w=window.open("","_blank");
+  if(!w){ toast("Allow pop-ups to print the day.",false); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${css}</style></head><body><h1>${title}</h1><div class="m">Printed ${today()} · ${list.length} stop${list.length===1?'':'s'}</div>${table}<scr`+`ipt>window.onload=function(){window.print();}</scr`+`ipt></body></html>`);
+  w.document.close();
 }
 
 function viewSalesDetail() {
@@ -999,6 +1266,20 @@ function viewManager() {
           </div>`).join("")}</div>`}
         <p class="tiny muted" style="margin-top:12px">Anything red has been sitting more than 5 days. That's the "someone should call them" pile — now it's visible.</p>
       </div>
+      ${(()=>{ const nf=S.mgrNoteFilter||"all"; let data=cardsWithNotes();
+        const wait=data.filter(x=>x.status==="needs").length;
+        if(nf==="needs") data=data.filter(x=>x.status==="needs"); else if(nf==="addressed") data=data.filter(x=>x.status==="addressed");
+        data.sort((a,b)=> (a.status===b.status?0:a.status==="needs"?-1:1) || (b.last.created_at>a.last.created_at?1:-1));
+        const seg=[["needs","Awaiting reply"],["addressed","Replied"],["all","All"]].map(([k,l])=>`<button data-mgrnotefilter="${k}" class="${nf===k?'active':''}">${l}</button>`).join("");
+        if(!cardsWithNotes().length) return "";
+        return `<div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <div><h2 style="font-size:16px;font-weight:600;margin:0">Manager notes — reply tracking</h2>
+            <div class="tiny muted" style="margin-top:2px">${wait} note${wait===1?'':'s'} still awaiting a reply from sales.</div></div>
+            <div class="modeseg">${seg}</div>
+          </div>
+          ${data.length?`<div class="stack">${data.map(x=>noteRow(x,'manager')).join("")}</div>`:`<div class="tiny muted" style="font-style:italic;padding:16px 0">Nothing in this filter.</div>`}
+        </div>`; })()}
       ${(()=>{ const act=(S.recurring||[]).filter(s=>s.active); return act.length?`
       <div class="card">
         <h2 style="font-size:16px;font-weight:600;margin:0 0 4px">Recurring visits</h2>
@@ -1025,8 +1306,33 @@ function bind() {
   document.querySelectorAll("[data-subscope]").forEach(b=>b.onclick=()=>{ S.subScope=b.dataset.subscope; render(); });
   const so=document.querySelector("[data-sort]"); if(so) so.onchange=()=>{ S.sort=so.value; render(); };
   const rf=document.querySelector("[data-refresh]"); if(rf) rf.onclick=()=>{ load(); toast("Refreshed from database."); };
+  const cl=document.querySelector("[data-changelog]"); if(cl) cl.onclick=openChangelog;
+  document.querySelectorAll("[data-modal-close]").forEach(b=>b.onclick=closeChangelog);
+  const ov=document.querySelector("[data-modal-overlay]"); if(ov) ov.onclick=(e)=>{ if(e.target===ov) closeChangelog(); };
   document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>quick(S.rows.find(x=>x.id===S.selectedId), b.dataset.quick));
   document.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ S.scope=b.dataset.scope; S.special=null; render(); });
+  document.querySelectorAll("[data-salesview]").forEach(b=>b.onclick=()=>{ S.salesView=b.dataset.salesview; render(); });
+  document.querySelectorAll("[data-calnav]").forEach(b=>b.onclick=()=>{
+    const now=new Date();
+    if(b.dataset.calnav==="today"){ S.calY=now.getFullYear(); S.calM=now.getMonth(); }
+    else { let mm=S.calM+(b.dataset.calnav==="next"?1:-1), yy=S.calY; if(mm<0){mm=11;yy--;} if(mm>11){mm=0;yy++;} S.calM=mm; S.calY=yy; }
+    render();
+  });
+  document.querySelectorAll("[data-calstatus]").forEach(b=>b.onclick=()=>{ S.calStatus=b.dataset.calstatus; render(); });
+  document.querySelectorAll("[data-calview]").forEach(b=>b.onclick=()=>{ S.calView=b.dataset.calview; render(); });
+  document.querySelectorAll("[data-calday]").forEach(b=>b.onclick=()=>{ S.calDay=b.dataset.calday; S.calView="day"; render(); });
+  document.querySelectorAll("[data-daynav]").forEach(b=>b.onclick=()=>{
+    if(b.dataset.daynav==="today"){ S.calDay=today(); }
+    else { const d=new Date((S.calDay||today())+"T00:00:00"); d.setDate(d.getDate()+(b.dataset.daynav==="next"?1:-1)); S.calDay=d.toISOString().slice(0,10); }
+    render();
+  });
+  const pd=document.querySelector("[data-printday]"); if(pd) pd.onclick=printDay;
+  document.querySelectorAll("[data-notefilter]").forEach(b=>b.onclick=()=>{ S.noteFilter=b.dataset.notefilter; render(); });
+  document.querySelectorAll("[data-notescope]").forEach(b=>b.onclick=()=>{ S.noteScope=b.dataset.notescope; render(); });
+  document.querySelectorAll("[data-mgrnotefilter]").forEach(b=>b.onclick=()=>{ S.mgrNoteFilter=b.dataset.mgrnotefilter; render(); });
+  document.querySelectorAll("[data-noteopen]").forEach(b=>b.onclick=()=>{ S.tab="sales"; S.selectedId=b.dataset.noteopen; render(); });
+  const ma=document.querySelector("[data-markaddressed]"); if(ma) ma.onclick=markAddressed;
+  const cperson=document.querySelector("[data-calperson]"); if(cperson) cperson.onchange=()=>{ S.calPerson=cperson.value; render(); };
   const pr=document.querySelector("[data-print]"); if(pr) pr.onclick=printSheet;
   const cpost=document.getElementById("c_post"); if(cpost) cpost.onclick=postComment;
   const asg=document.querySelector("[data-assign]"); if(asg) asg.onclick=()=>assignSelf(S.rows.find(x=>x.id===S.selectedId));
@@ -1121,7 +1427,9 @@ function bind() {
   };
 }
 
-load();
+load().then(()=>{
+  try{ if(localStorage.getItem('cp_seen_version')!==APP_VERSION){ S.showChangelog=true; render(); } }catch(e){}
+});
 </script>
 </body>
 </html>
