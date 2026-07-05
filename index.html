@@ -227,6 +227,12 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"1.12", date:"2026-07-05", title:"Manager command center & tidier board", items:[
+    "Manager view: new Projects block, plus clickable rows on Open items, Projects, and Recurring visits",
+    "\u201cSubmissions by branch\u201d is now \u201cSubmission Summary\u201d \u2014 added a by-person breakdown, dropped repeat customers",
+    "Sales board now splits into Leads, Projects, and Recurring sections divided by borders",
+    "Live pipeline shows an \u201cIn progress\u201d watermark; future recurring cards sink to the bottom until they're due",
+    "Completing a recurring visit now shows the next visit date to the submitter" ]},
   { v:"1.11", date:"2026-07-05", title:"Completion-driven recurring visits", items:[
     "Recurring visits now advance when a rep taps “Complete visit” — the next one is scheduled from the completion date",
     "A safety net still spawns a card if a schedule ever goes overdue with none open",
@@ -370,8 +376,9 @@ async function completeVisit(r){
   if(!confirm("Mark this visit complete?"+(next&&sched&&sched.active?"\n\nThe next visit will be scheduled for "+fmtDate(next)+".":""))) return;
   S.busy=true; render();
   try{
-    await sbPatch("cp_requests","id=eq."+r.id,{ status:"No action needed", last_action_date:today() });
-    await sbPost("cp_updates",{ request_id:r.id, update_date:today(), status:"No action needed", note:"Recurring visit completed", author:S.persona.name, public_summary:"Visit completed." });
+    const donePub = (sched && sched.active && next) ? ("Visit completed — next visit scheduled for "+fmtDate(next)+".") : "Visit completed.";
+    await sbPatch("cp_requests","id=eq."+r.id,{ status:"No action needed", public_summary:donePub, last_action_date:today() });
+    await sbPost("cp_updates",{ request_id:r.id, update_date:today(), status:"No action needed", note:"Recurring visit completed", author:S.persona.name, public_summary:donePub });
     if(sched && sched.active && next){
       await spawnRecurringCard(sched, next);
       await sbPatch("cp_recurring","id=eq."+sched.id,{ next_due:next });
@@ -1002,7 +1009,13 @@ function viewSales() {
       ? (S.search
           ? empty(I.search,"No matches","Nothing matches “"+esc(S.search)+"”. Try fewer letters, or clear the search.")
           : empty(I.dash, emTitle, emSub))
-      : `<div class="cardgrid">${list.map(salesCard).join("")}</div>`}`;
+      : (()=>{
+          const leads=list.filter(r=>r.source!=="Project"&&r.source!=="Recurring visit");
+          const projects=list.filter(r=>r.source==="Project");
+          const recurring=list.filter(r=>r.source==="Recurring visit").sort((a,b)=>(a.next_follow_up||"")<(b.next_follow_up||"")?-1:1);
+          const sec=(label,arr)=>arr.length?`<div style="margin-top:26px;padding-top:18px;border-top:2px solid #e2e8f0"><div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:12px">${label} <span class="tiny muted" style="font-weight:500">· ${arr.length}</span></div><div class="cardgrid">${arr.map(salesCard).join("")}</div></div>`:"";
+          return `${leads.length?`<div class="cardgrid">${leads.map(salesCard).join("")}</div>`:""}${sec("Projects",projects)}${sec("Recurring visits",recurring)}`;
+        })()}`;
 }
 
 function calDate(r){
@@ -1242,7 +1255,8 @@ function viewManager() {
   const byBranch = BRANCHES.map(b=>({b,n:rows.filter(r=>r.branch===b).length}));
   const maxB = Math.max(1,...byBranch.map(x=>x.n));
   const aging = open.map(r=>({...r,age:days(r.submitted_at,today())})).sort((a,b)=>b.age-a.age);
-  const repeats = Object.entries(rows.reduce((m,r)=>{const k=r.customer_name.toLowerCase();m[k]=(m[k]||0)+1;return m;},{})).filter(([,n])=>n>1);
+  const byPerson = Object.entries(rows.reduce((m,r)=>{const k=r.submitted_by||'Unknown';m[k]=(m[k]||0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]);
+  const maxP = Math.max(1,...byPerson.map(x=>x[1]));
   const unassigned = open.filter(r=>r.assigned_to==='Unassigned').length;
   const overdue = open.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
   const aging5 = open.filter(r=>days(r.submitted_at,today())>5).length;
@@ -1290,15 +1304,16 @@ function viewManager() {
     </div>
     <div class="grid2" style="gap:20px">
       <div class="card">
-        <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.bldg}</span> Submissions by branch</h2>
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.bldg}</span> Submission Summary</h2>
+        <div class="tiny muted" style="margin-bottom:14px">Where your leads come from — by branch and by person.</div>
+        <h3 style="font-size:13px;font-weight:600;color:#475569;margin:0 0 8px">By branch</h3>
         <div class="stack">${byBranch.map(({b,n})=>`<div style="display:flex;align-items:center;gap:12px"><span class="tiny" style="width:96px;color:#475569">${b}</span><div class="bar"><div style="width:${(n/maxB)*100}%;min-width:${n?28:0}px">${n||""}</div></div></div>`).join("")}</div>
-        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9">
-          <h3 style="font-size:14px;font-weight:600;color:#334155;margin:0 0 8px;display:flex;align-items:center;gap:6px"><span style="color:#94a3b8;display:inline-flex">${I.trend}</span>Repeat customers</h3>
-          ${repeats.length===0?'<p class="tiny muted" style="margin:0">No customer flagged more than once yet. When they are, they show here — that\'s your early-warning list.</p>':
-            `<div class="stack" style="--x:0">${repeats.map(([n,c])=>`<div style="display:flex;justify-content:space-between;font-size:14px;color:#475569"><span style="text-transform:capitalize">${esc(n)}</span><span style="color:#e11d48;font-weight:500">${c}×</span></div>`).join("")}</div>`}
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid #f1f5f9">
+          <h3 style="font-size:13px;font-weight:600;color:#475569;margin:0 0 8px">By person</h3>
+          <div class="stack">${byPerson.map(([p,n])=>`<div style="display:flex;align-items:center;gap:12px"><span class="tiny" style="width:96px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p)}</span><div class="bar"><div style="width:${(n/maxP)*100}%;min-width:${n?28:0}px">${n||""}</div></div></div>`).join("")}</div>
         </div>
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
-          <h3 style="font-size:14px;font-weight:600;color:#334155;margin:0 0 10px">Where leads come from</h3>
+          <h3 style="font-size:13px;font-weight:600;color:#475569;margin:0 0 10px">Where leads come from</h3>
           <div style="display:flex;gap:10px">
             <div style="flex:1;background:#fef2f4;border:1px solid #fde2e5;border-radius:10px;padding:10px 12px"><div style="font-size:20px;font-weight:700;color:#0f172a">${fromCounter}</div><div class="tiny muted">from the counter</div></div>
             <div style="flex:1;background:#eff4ff;border:1px solid #dbeafe;border-radius:10px;padding:10px 12px"><div style="font-size:20px;font-weight:700;color:#0f172a">${fromField}</div><div class="tiny muted">from the field</div></div>
@@ -1308,11 +1323,11 @@ function viewManager() {
       <div class="card">
         <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.clock}</span> Open items, oldest first</h2>
         ${aging.length===0?'<p class="muted" style="font-size:14px">Nothing open. Clean board.</p>':
-          `<div>${aging.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f8fafc">
+          `<div class="stack">${aging.map(r=>`<button class="dayrow" data-noteopen="${r.id}" style="align-items:center;justify-content:space-between;border-left-color:${stageColor(r.status)}">
             <div style="min-width:0"><div style="font-size:14px;font-weight:500;color:#334155">${esc(r.customer_name)}</div><div class="tiny muted">${esc(r.branch)} · ${r.assigned_to==='Unassigned'?'unassigned':esc(r.assigned_to)}${(r.next_follow_up&&r.next_follow_up<today())?' · <span style="color:#e11d48;font-weight:600">follow-up overdue</span>':''}</div></div>
             <div style="display:flex;align-items:center;gap:8px">${pill(r.status)}<span style="font-size:12px;font-weight:600;width:44px;text-align:right;color:${r.age>5?'#e11d48':'#94a3b8'}">${r.age}d</span></div>
-          </div>`).join("")}</div>`}
-        <p class="tiny muted" style="margin-top:12px">Anything red has been sitting more than 5 days. That's the "someone should call them" pile — now it's visible.</p>
+          </button>`).join("")}</div>`}
+        <p class="tiny muted" style="margin-top:12px">Anything red has been sitting more than 5 days. Tap any card to open it.</p>
       </div>
       ${(()=>{ const who=S.mgrNoteWho||"mine"; const nf=S.mgrNoteFilter||"needs"; const name=S.persona.name;
         let data=managerNoteData(who, name);
@@ -1329,15 +1344,29 @@ function viewManager() {
           </div>
           ${data.length?`<div class="stack">${data.map(x=>noteRow(x,'manager')).join("")}</div>`:`<div class="tiny muted" style="font-style:italic;padding:16px 0">${who==="mine"&&nf==="needs"?"Nothing waiting on you — you're all caught up. 🎉":"Nothing in this filter."}</div>`}
         </div>`; })()}
+      ${(()=>{ const projects=rows.filter(r=>r.source==="Project"); if(!projects.length) return "";
+        projects.sort((a,b)=>{const ao=OPEN_STATUSES.includes(a.status),bo=OPEN_STATUSES.includes(b.status); if(ao!==bo)return ao?-1:1; return days(b.submitted_at,today())-days(a.submitted_at,today());});
+        const openN=projects.filter(r=>OPEN_STATUSES.includes(r.status)).length;
+        return `<div class="card">
+          <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.clip}</span> Projects</h2>
+          <div class="tiny muted" style="margin-bottom:12px">${openN} open project${openN===1?'':'s'} being monitored. Tap to open.</div>
+          <div class="stack">${projects.map(r=>`<button class="dayrow" data-noteopen="${r.id}" style="align-items:center;justify-content:space-between;border-left-color:${stageColor(r.status)}">
+            <div style="min-width:0"><div style="font-size:14px;font-weight:600;color:#334155">${esc(r.customer_name)}</div><div class="tiny muted">${esc(r.branch||'')} · ${r.assigned_to==='Unassigned'?'unassigned':esc(r.assigned_to)}${r.next_follow_up?' · next '+fmtDate(r.next_follow_up):''}</div></div>
+            ${pill(r.status)}
+          </button>`).join("")}</div>
+        </div>`; })()}
       ${(()=>{ const act=(S.recurring||[]).filter(s=>s.active); return act.length?`
       <div class="card">
         <h2 style="font-size:16px;font-weight:600;margin:0 0 4px">Recurring visits</h2>
-        <div class="tiny muted" style="margin-bottom:14px">Active schedules — the next visit is scheduled when the rep completes the last one. “Next due” is the current target.</div>
-        ${act.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f8fafc">
-          <div style="min-width:0"><div style="font-size:14px;font-weight:600;color:#334155">${esc(s.customer_name)} <span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px;margin-left:4px">every ${esc(s.cadence_value)} ${esc(s.cadence_unit)}</span></div>
-          <div class="tiny muted">${esc(s.assigned_to||'Unassigned')} · ${esc(s.branch||'')} · next due ${fmtDate(s.next_due)}</div></div>
+        <div class="tiny muted" style="margin-bottom:14px">Active schedules — the next visit is scheduled when the rep completes the last one. Tap a row to open its current card.</div>
+        ${act.map(s=>{ const cur=S.rows.find(r=>r.recurring_id===s.id && OPEN_STATUSES.includes(r.status));
+          return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f8fafc">
+          <button ${cur?`data-noteopen="${cur.id}"`:''} style="background:none;border:none;text-align:left;flex:1;min-width:0;padding:0;${cur?'cursor:pointer':'cursor:default'}">
+            <div style="font-size:14px;font-weight:600;color:#334155">${esc(s.customer_name)} <span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px;margin-left:4px">every ${esc(s.cadence_value)} ${esc(s.cadence_unit)}</span></div>
+            <div class="tiny muted">${esc(s.assigned_to||'Unassigned')} · ${esc(s.branch||'')} · next due ${fmtDate(s.next_due)}</div>
+          </button>
           <button class="linkish" data-recur-off="${s.id}" style="color:#dc2626">Stop</button>
-        </div>`).join("")}
+        </div>`;}).join("")}
       </div>`:""; })()}
     </div>`;
 }
