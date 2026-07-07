@@ -1,3 +1,0 @@
-git add vercel.json
-git commit -m "Add vercel.json to fix output directory"
-git push
