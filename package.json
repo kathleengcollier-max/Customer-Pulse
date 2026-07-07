@@ -1,0 +1,22 @@
+{
+  "name": "customer-pulse",
+  "version": "1.0.0",
+  "description": "Customer Pulse — internal sales-lead & field-call tracker for Legacy Group",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "build": "echo 'No build step required for static site'",
+    "lint": "echo 'No linter configured'"
+  },
+  "dependencies": {
+    "@vercel/speed-insights": "^1.1.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "vercel",
+    "speed-insights"
+  ],
+  "author": "KGC",
+  "license": "UNLICENSED",
+  "private": true
+}
