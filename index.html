@@ -245,8 +245,9 @@ const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
   { v:"1.13", date:"2026-07-11", title:"Customer directory & autocomplete", items:[
     "Admin can upload a weekly customer CSV (Manager view) that replaces the whole list",
-    "Customer name fields autocomplete by name or account number and fill in account, phone, and full address",
-    "Full structured address (street, city, state, zip) shows on cards, the record, and the printable day route sheet" ]},
+    "Type a customer name OR account number in either field to autocomplete — fills name, account, phone, and full address",
+    "Full structured address (street, city, state, zip) shows on cards, the record, and the printable day route sheet",
+    "Added a Clear button to all three entry forms for a quick fresh start" ]},
   { v:"1.12", date:"2026-07-05", title:"Manager command center & tidier board", items:[
     "Manager view: new Projects block, plus clickable rows on Open items, Projects, and Recurring visits",
     "\u201cSubmissions by branch\u201d is now \u201cSubmission Summary\u201d \u2014 added a by-person breakdown, dropped repeat customers",
@@ -482,9 +483,9 @@ function attachAutocomplete(inputId, targets){
     box.style.display="block";
     box.querySelectorAll(".acitem[data-i]").forEach(el=>{
       el.addEventListener("mousedown",(e)=>{ e.preventDefault();
-        const c=matches[Number(el.dataset.i)]; input.value=c.name;
+        const c=matches[Number(el.dataset.i)];
         const set=(id,v)=>{ const t=id&&document.getElementById(id); if(t) t.value=v||""; };
-        set(targets.account,c.account_number); set(targets.phone,c.phone);
+        set(targets.name,c.name); set(targets.account,c.account_number); set(targets.phone,c.phone);
         set(targets.address1,c.address1); set(targets.address2,c.address2); set(targets.city,c.city); set(targets.state,c.state); set(targets.zip,c.zip);
         hide();
       });
@@ -802,7 +803,7 @@ function viewSubmit() {
     <div class="card">
       <div class="grid2">
         <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span> ${(S.customers||[]).length?`<span style="color:#94a3b8;font-weight:400">· ${(S.customers||[]).length} on file</span>`:`<span style="color:#dc2626;font-weight:400">· none loaded</span>`}</span><input id="s_customer" placeholder="Start typing…"/><div id="s_customer_ac" class="acbox"></div></label>
-        <label class="f"><span class="lbl">Account # (if known)</span><input id="s_account" placeholder="Optional"/></label>
+        <label class="f" style="position:relative"><span class="lbl">Account # <span style="color:#94a3b8;font-weight:400">(search or fill)</span></span><input id="s_account" placeholder="Start typing…"/><div id="s_account_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Contact name</span><input id="s_contact" placeholder="Who to ask for"/></label>
         <label class="f"><span class="lbl">Phone <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_phone" placeholder="e.g. 562-555-0142"/></label>
         <label class="f"><span class="lbl">Email <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_email" type="email" placeholder="e.g. name@company.com"/></label>
@@ -830,7 +831,7 @@ function viewSubmit() {
     <div class="card">
       <div class="grid2">
         <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span> ${(S.customers||[]).length?`<span style="color:#94a3b8;font-weight:400">· ${(S.customers||[]).length} on file</span>`:`<span style="color:#dc2626;font-weight:400">· none loaded</span>`}</span><input id="r_customer" placeholder="Start typing…"/><div id="r_customer_ac" class="acbox"></div></label>
-        <label class="f"><span class="lbl">Account # (if known)</span><input id="r_account" placeholder="Optional"/></label>
+        <label class="f" style="position:relative"><span class="lbl">Account # <span style="color:#94a3b8;font-weight:400">(search or fill)</span></span><input id="r_account" placeholder="Start typing…"/><div id="r_account_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Contact name</span><input id="r_contact" placeholder="Who to ask for"/></label>
         <label class="f"><span class="lbl">Phone</span><input id="r_phone" placeholder="e.g. 562-555-0142"/></label>
         <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="r_branch">${opts(BRANCHES)}</select></label>
@@ -858,7 +859,7 @@ function viewSubmit() {
     <div class="card">
       <div class="grid2">
         <label class="f" style="position:relative"><span class="lbl">Project / customer name <span class="req">*</span> ${(S.customers||[]).length?`<span style="color:#94a3b8;font-weight:400">· ${(S.customers||[]).length} on file</span>`:`<span style="color:#dc2626;font-weight:400">· none loaded</span>`}</span><input id="p_customer" placeholder="Start typing…"/><div id="p_customer_ac" class="acbox"></div></label>
-        <label class="f"><span class="lbl">Account # (if known)</span><input id="p_account" placeholder="Optional"/></label>
+        <label class="f" style="position:relative"><span class="lbl">Account # <span style="color:#94a3b8;font-weight:400">(search or fill)</span></span><input id="p_account" placeholder="Start typing…"/><div id="p_account_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Site contact</span><input id="p_contact" placeholder="Contact / GC"/></label>
         <label class="f"><span class="lbl">Phone</span><input id="p_phone" placeholder="e.g. 562-555-0142"/></label>
         <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="p_branch">${opts(BRANCHES)}</select></label>
@@ -1586,9 +1587,12 @@ function bind() {
     card.querySelectorAll(".acbox").forEach(el=>{ el.style.display="none"; el.innerHTML=""; });
     const first=card.querySelector("input"); if(first) first.focus();
   });
-  attachAutocomplete("s_customer",{account:"s_account",phone:"s_phone",address1:"s_addr1",address2:"s_addr2",city:"s_city",state:"s_state",zip:"s_zip"});
-  attachAutocomplete("p_customer",{account:"p_account",phone:"p_phone",address1:"p_addr1",address2:"p_addr2",city:"p_city",state:"p_state",zip:"p_zip"});
-  attachAutocomplete("r_customer",{account:"r_account",phone:"r_phone",address1:"r_addr1",address2:"r_addr2",city:"r_city",state:"r_state",zip:"r_zip"});
+  const sT={name:"s_customer",account:"s_account",phone:"s_phone",address1:"s_addr1",address2:"s_addr2",city:"s_city",state:"s_state",zip:"s_zip"};
+  const pT={name:"p_customer",account:"p_account",phone:"p_phone",address1:"p_addr1",address2:"p_addr2",city:"p_city",state:"p_state",zip:"p_zip"};
+  const rT={name:"r_customer",account:"r_account",phone:"r_phone",address1:"r_addr1",address2:"r_addr2",city:"r_city",state:"r_state",zip:"r_zip"};
+  attachAutocomplete("s_customer",sT); attachAutocomplete("s_account",sT);
+  attachAutocomplete("p_customer",pT); attachAutocomplete("p_account",pT);
+  attachAutocomplete("r_customer",rT); attachAutocomplete("r_account",rT);
 
   const rb=document.getElementById("r_submit");
   if(rb) rb.onclick=async()=>{
