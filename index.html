@@ -237,6 +237,9 @@ async function sbGetAll(table, extra){
   }
   return all;
 }
+function logActivity(event, detail){
+  try{ sbPost("cp_activity",{ actor:(S.persona&&S.persona.name)||"?", actor_role:(S.persona&&S.persona.type)||"?", event, detail:detail||null }).catch(()=>{}); }catch(_){}
+}
 const sbPost = async (t, b) => { const r = await fetch(SB_URL + "/" + t, { method:"POST", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 const sbPatch = async (t, f, b) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"PATCH", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"DELETE", headers:H }); if (!r.ok) throw new Error(await r.text()); return true; };
@@ -406,6 +409,7 @@ async function completeVisit(r){
       await spawnRecurringCard(sched, next);
       await sbPatch("cp_recurring","id=eq."+sched.id,{ next_due:next });
     }
+    logActivity("complete_visit","completed a recurring visit for "+(r.customer_name||""));
     toast(next&&sched&&sched.active?("Visit done — next one set for "+fmtDate(next)+"."):"Visit completed."); S.selectedId=null; S.busy=false; await load();
   }catch(e){ toast("Couldn't complete the visit. Try again.",false); S.busy=false; render(); }
 }
@@ -419,6 +423,7 @@ async function load() {
     try { S.comments = await sbGet("cp_comments?select=*&order=created_at.asc"); } catch(_) { S.comments = []; }
     try { S.recurring = await sbGet("cp_recurring?select=*&order=next_due.asc"); } catch(_) { S.recurring = []; }
     try { S.customers = await sbGetAll("cp_customers","&order=name.asc"); } catch(_) { S.customers = []; }
+    try { S.activity = await sbGet("cp_activity?select=*&order=created_at.desc&limit=500"); } catch(_) { S.activity = []; }
     await spawnDueVisits();
     S.lastSync = new Date().toISOString();
   } catch (e) { S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false); }
@@ -601,7 +606,7 @@ async function quick(r,key){
   try{
     await sbPatch("cp_requests","id=eq."+r.id,patch);
     await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:q.status,note:q.note,author:S.persona.name});
-    toast(q.note+" — saved."); S.busy=false; await load();
+    logActivity("touch",q.note+" · "+(r.customer_name||"")); toast(q.note+" — saved."); S.busy=false; await load();
   }catch(e){ toast("Couldn't save. Try again.",false); S.busy=false; render(); }
 }
 async function assignSelf(r){
@@ -611,7 +616,7 @@ async function assignSelf(r){
   try{
     await sbPatch("cp_requests","id=eq."+r.id,{ assigned_to:S.persona.name, status:st, first_touched_at:r.first_touched_at||today(), last_action_date:today() });
     await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:st,note:"Picked up this lead",author:S.persona.name,public_summary:S.persona.name+" picked this up and will be following up."});
-    toast("Assigned to you."); S.busy=false; await load();
+    logActivity("assign","picked up "+(r.customer_name||"")); toast("Assigned to you."); S.busy=false; await load();
   }catch(e){ toast("Couldn't assign. Try again.",false); S.busy=false; render(); }
 }
 async function assignLead(r, value){
@@ -624,7 +629,7 @@ async function assignLead(r, value){
   try{
     await sbPatch("cp_requests","id=eq."+r.id,{ assigned_to:value, status:st, first_touched_at:r.first_touched_at||(st!=="New"?today():null), last_action_date:today() });
     await sbPost("cp_updates",{ request_id:r.id, update_date:today(), status:st, note, author:who, public_summary:pub });
-    toast(value==="Unassigned"?"Set to unassigned.":"Owner set to "+value+"."); S.busy=false; await load();
+    logActivity("assign",note+" · "+(r.customer_name||"")); toast(value==="Unassigned"?"Set to unassigned.":"Owner set to "+value+"."); S.busy=false; await load();
   }catch(e){ toast("Couldn't reassign. Try again.",false); S.busy=false; render(); }
 }
 async function deleteCard(r){
@@ -702,7 +707,7 @@ async function postComment(){
   S.busy=true; render();
   try{
     await sbPost("cp_comments",{ request_id:r.id, author:S.persona.name, author_role:S.persona.type, body });
-    toast(isMgrNote({author_role:S.persona.type})?"Note posted.":"Reply posted."); S.busy=false; await load();
+    logActivity("note",(isMgrNote({author_role:S.persona.type})?"posted a manager note on ":"replied on ")+(r.customer_name||"")); toast(isMgrNote({author_role:S.persona.type})?"Note posted.":"Reply posted."); S.busy=false; await load();
   }catch(e){ toast("Couldn't post. Did you run the comments SQL?",false); S.busy=false; render(); }
 }
 async function markAddressed(){
@@ -710,7 +715,7 @@ async function markAddressed(){
   S.busy=true; render();
   try{
     await sbPost("cp_comments",{ request_id:r.id, author:S.persona.name, author_role:S.persona.type, body:"✓ Addressed" });
-    toast("Marked as addressed."); S.busy=false; await load();
+    logActivity("note","marked a note addressed on "+(r.customer_name||"")); toast("Marked as addressed."); S.busy=false; await load();
   }catch(e){ toast("Couldn't update. Try again.",false); S.busy=false; render(); }
 }
 
@@ -746,6 +751,7 @@ function render() {
     { id:"mine", label:"My Submissions", icon:I.clip, show:true },
     { id:"sales", label:"Sales Dashboard", icon:I.dash, show:p.type!=="employee" },
     { id:"manager", label:"Manager View", icon:I.chart, show:p.type==="manager"||p.type==="admin" },
+    { id:"activity", label:"Activity", icon:I.activity, show:p.type==="admin" },
   ].filter(t=>t.show);
 
   const conn = S.conn==="live"
@@ -759,6 +765,7 @@ function render() {
   else if (S.tab==="mine") body = S.selectedId ? viewEmployeeDetail() : viewMine();
   else if (S.tab==="sales") body = S.selectedId ? viewSalesDetail() : viewSales();
   else if (S.tab==="manager") body = viewManager();
+  else if (S.tab==="activity") body = viewActivity();
 
   document.getElementById("root").innerHTML = `
     <header>
@@ -1355,6 +1362,44 @@ function touchTimeline(u){
 }
 function empty(icon,t,b){ return `<div class="empty">${icon}<div style="font-weight:600;color:#334155;margin-top:12px">${t}</div><div class="tiny muted" style="margin-top:4px">${b}</div></div>`; }
 
+function viewActivity(){
+  const acts=S.activity||[];
+  const weekAgo=Date.now()-7*86400000;
+  const recent=acts.filter(a=> new Date(a.created_at).getTime()>=weekAgo);
+  const sessions=recent.filter(a=>a.event==="session").length;
+  const actions=recent.filter(a=>a.event!=="session").length;
+  const byPerson={};
+  recent.forEach(a=>{ const k=a.actor||"?"; byPerson[k]=byPerson[k]||{s:0,a:0}; if(a.event==="session") byPerson[k].s++; else byPerson[k].a++; });
+  const people=Object.entries(byPerson).sort((x,y)=>(y[1].s+y[1].a)-(x[1].s+x[1].a));
+  const evLabel={session:"Session",submit:"Submission",touch:"Touch",assign:"Assignment",complete_visit:"Visit completed",note:"Manager note",customer_import:"Customer upload"};
+  const evColor={session:"#94a3b8",submit:"#2563eb",touch:"#0d9488",assign:"#7c3aed",complete_visit:"#16a34a",note:"#9f1239",customer_import:"#7c3aed"};
+  const statBox=(k,v,sub)=>`<div class="card stat"><div class="k">${k}</div><div class="v">${esc(v)}</div><div class="s">${esc(sub)}</div></div>`;
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:12px">
+    <h1 class="page">Activity</h1>
+    <button class="qbtn" data-refresh>${I.refresh} Refresh</button>
+  </div>
+  <div class="tiny muted" style="margin-bottom:16px">Sessions and actions across the team. Personas are honor-system until real logins (v2.0), so this reflects who the app was used <i>as</i>.</div>
+  <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+    ${statBox("Sessions this week", String(sessions), "app opens")}
+    ${statBox("Actions this week", String(actions), "submissions, touches & more")}
+    ${statBox("Most active", people.length?people[0][0]:"—", "by total events, 7 days")}
+  </div>
+  <div class="grid2" style="gap:20px">
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 12px">By person <span class="tiny muted" style="font-weight:400">· last 7 days</span></h2>
+      ${people.length? `<div class="stack">${people.map(([n,c])=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:7px 0;border-bottom:1px solid #f8fafc"><span style="font-weight:600;color:#334155">${esc(n)}</span><span class="tiny muted">${c.s} session${c.s===1?'':'s'} · ${c.a} action${c.a===1?'':'s'}</span></div>`).join("")}</div>` : `<p class="tiny muted">No activity in the last 7 days yet.</p>`}
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 12px">Recent activity <span class="tiny muted" style="font-weight:400">· newest first</span></h2>
+      ${acts.length? `<div class="stack" style="max-height:520px;overflow-y:auto">${acts.slice(0,120).map(a=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f8fafc">
+        <span style="width:8px;height:8px;border-radius:2px;background:${evColor[a.event]||'#94a3b8'};margin-top:5px;flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;color:#334155"><b>${esc(a.actor||'?')}</b> ${esc(a.detail||evLabel[a.event]||a.event)}</div>
+        <div class="tiny muted">${esc(evLabel[a.event]||a.event)} · ${esc(fmtDateTime(a.created_at))}</div></div>
+      </div>`).join("")}</div>` : `<p class="tiny muted">Nothing logged yet — activity appears here as the team uses the app.</p>`}
+    </div>
+  </div>`;
+}
 function viewManager() {
   const rows = S.rows;
   const open = rows.filter(r=>OPEN_STATUSES.includes(r.status));
@@ -1493,7 +1538,7 @@ function viewManager() {
 
 // ---- Events -----------------------------------------------------------
 function bind() {
-  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=PERSONAS.find(p=>p.id===b.dataset.persona); S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=S.persona.type==="sales"?"mine":"everyone"; S.filter="Open"; S.special=null; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; render(); });
+  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=PERSONAS.find(p=>p.id===b.dataset.persona); S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=S.persona.type==="sales"?"mine":"everyone"; S.filter="Open"; S.special=null; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; logActivity("session","opened the app"); render(); });
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
   const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
   const qc=document.querySelector("[data-clearsearch]"); if(qc) qc.onclick=()=>{ S.search=""; S._focus="q_search"; render(); };
@@ -1503,7 +1548,7 @@ function bind() {
   document.querySelectorAll("[data-minefilter]").forEach(b=>b.onclick=()=>{ S.mineFilter=b.dataset.minefilter; render(); });
   document.querySelectorAll("[data-subscope]").forEach(b=>b.onclick=()=>{ S.subScope=b.dataset.subscope; render(); });
   const so=document.querySelector("[data-sort]"); if(so) so.onchange=()=>{ S.sort=so.value; render(); };
-  const rf=document.querySelector("[data-refresh]"); if(rf) rf.onclick=()=>{ load(); toast("Refreshed from database."); };
+  document.querySelectorAll("[data-refresh]").forEach(rf=>rf.onclick=()=>{ load(); toast("Refreshed from database."); });
   const cimp=document.getElementById("cust_import");
   if(cimp) cimp.onclick=async()=>{
     const fileEl=document.getElementById("cust_file");
@@ -1514,7 +1559,7 @@ function bind() {
     if(!list.length){ toast("No customers found in that file.",false); return; }
     if(!confirm("Replace the entire customer list with "+list.length+" customer"+(list.length===1?"":"s")+" from this file?")) return;
     S.busy=true; render();
-    try{ await replaceCustomers(list); toast(list.length+" customers loaded."); S.busy=false; await load(); }
+    try{ await replaceCustomers(list); logActivity("customer_import","uploaded "+list.length+" customers"); toast(list.length+" customers loaded."); S.busy=false; await load(); }
     catch(e){ toast("Import failed — check the file and try again.",false); S.busy=false; render(); }
   };
   const cl=document.querySelector("[data-changelog]"); if(cl) cl.onclick=openChangelog;
@@ -1576,7 +1621,7 @@ function bind() {
     S.busy=true; render();
     try{
       await sbPost("cp_requests",payload);
-      toast(field?"Field call logged — it's in your pipeline.":"Request submitted — sales can see it now.");
+      logActivity("submit",(field?"logged a field call: ":"submitted a request: ")+base.customer_name); toast(field?"Field call logged — it's in your pipeline.":"Request submitted — sales can see it now.");
       if(field){ S.tab="sales"; S.scope="mine"; } else { S.tab="mine"; }
       S.busy=false; await load();
     }catch(e){ toast(field?"Couldn't log the call. Try again.":"Submit failed. Try again.",false); S.busy=false; render(); }
@@ -1612,7 +1657,7 @@ function bind() {
       const res=await sbPost("cp_recurring",row);
       const sched=Array.isArray(res)?res[0]:res;
       if(sched) await spawnRecurringCard(sched, first);
-      toast("Recurring visit scheduled — first card is on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load();
+      logActivity("submit","scheduled a recurring visit for "+customer); toast("Recurring visit scheduled — first card is on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load();
     }
     catch(e){ toast("Couldn't schedule. Try again.",false); S.busy=false; render(); }
   };
@@ -1627,7 +1672,7 @@ function bind() {
       source:"Project", assigned_to:assigned, status:(assigned&&assigned!=="Unassigned")?"Assigned":"New",
       next_follow_up:document.getElementById("p_next").value||null, first_touched_at:null, last_action_date:today() };
     S.busy=true; render();
-    try{ await sbPost("cp_requests",payload); toast("Project created — it's on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
+    try{ await sbPost("cp_requests",payload); logActivity("submit","created a project: "+customer); toast("Project created — it's on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
     catch(e){ toast("Couldn't create the project. Try again.",false); S.busy=false; render(); }
   };
 
@@ -1654,7 +1699,7 @@ function bind() {
       // 2. update the lead's current snapshot (ownership is set separately, at the lead level)
       await sbPatch("cp_requests","id=eq."+r.id,{ status, next_follow_up:next,
         ...(pub?{public_summary:pub}:{}), ...(products?{products_discussed:products}:{}), first_touched_at, last_action_date:today() });
-      toast("Touch logged."); S.busy=false; await load();
+      logActivity("touch","logged a touch on "+(r.customer_name||"")); toast("Touch logged."); S.busy=false; await load();
     }catch(e){ toast("Couldn't log the touch. Try again.",false); S.busy=false; render(); }
   };
 }
