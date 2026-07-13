@@ -226,6 +226,16 @@ const SB_URL = "https://xfcjxmoqsfcvlskievgx.supabase.co/rest/v1";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmY2p4bW9xc2Zjdmxza2lldmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjk4NzYsImV4cCI6MjA5ODYwNTg3Nn0.lrZdijIuSOQxZMNFFdm_sjPgvJQFrYj41ihr-FhrU30";
 const H = { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" };
 const sbGet = async p => { const r = await fetch(SB_URL + "/" + p, { headers: H }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+async function sbGetAll(table, extra){
+  const all=[]; const page=1000; let offset=0;
+  while(true){
+    const batch=await sbGet(table+"?select=*"+(extra||"")+"&limit="+page+"&offset="+offset);
+    all.push(...batch);
+    if(batch.length<page || offset>200000) break;
+    offset+=page;
+  }
+  return all;
+}
 const sbPost = async (t, b) => { const r = await fetch(SB_URL + "/" + t, { method:"POST", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 const sbPatch = async (t, f, b) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"PATCH", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"DELETE", headers:H }); if (!r.ok) throw new Error(await r.text()); return true; };
@@ -405,7 +415,7 @@ async function load() {
     S.rows = reqs; S.updates = ups; S.conn = "live";
     try { S.comments = await sbGet("cp_comments?select=*&order=created_at.asc"); } catch(_) { S.comments = []; }
     try { S.recurring = await sbGet("cp_recurring?select=*&order=next_due.asc"); } catch(_) { S.recurring = []; }
-    try { S.customers = await sbGet("cp_customers?select=*&order=name.asc"); } catch(_) { S.customers = []; }
+    try { S.customers = await sbGetAll("cp_customers","&order=name.asc"); } catch(_) { S.customers = []; }
     await spawnDueVisits();
     S.lastSync = new Date().toISOString();
   } catch (e) { S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false); }
