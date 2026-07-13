@@ -144,6 +144,10 @@
   .nb-wait { color:#92400e; background:#fef3c7; }
   .nb-done { color:#166534; background:#dcfce7; }
   .segcount { display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px; font-size:10px; font-weight:800; color:#fff; background:#e11d48; border-radius:999px; margin-left:5px; }
+  .acbox { position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:60; max-height:240px; overflow-y:auto; display:none; margin-top:3px; }
+  .acitem { padding:8px 12px; cursor:pointer; border-bottom:1px solid #f6f8fa; }
+  .acitem:hover { background:#f1f5f9; }
+  .acitem:last-child { border-bottom:none; }
 
   .search { position:relative; margin-bottom:14px; max-width:380px; }
   .search input { width:100%; padding:9px 32px 9px 34px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; }
@@ -227,6 +231,10 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"1.13", date:"2026-07-11", title:"Customer directory & autocomplete", items:[
+    "Admin can upload a weekly customer CSV (Manager view) that replaces the whole list",
+    "Customer name fields autocomplete by name or account number and fill in account, phone, and full address",
+    "Full structured address (street, city, state, zip) shows on cards, the record, and the printable day route sheet" ]},
   { v:"1.12", date:"2026-07-05", title:"Manager command center & tidier board", items:[
     "Manager view: new Projects block, plus clickable rows on Open items, Projects, and Recurring visits",
     "\u201cSubmissions by branch\u201d is now \u201cSubmission Summary\u201d \u2014 added a by-person breakdown, dropped repeat customers",
@@ -344,7 +352,7 @@ function addCadence(dateStr, val, unit){
 }
 async function spawnRecurringCard(s, due){
   return sbPost("cp_requests",{ submitted_by:s.created_by||"Recurring", branch:s.branch||BRANCHES[0],
-    customer_name:s.customer_name, account_number:s.account_number||null, contact_name:s.contact_name||null, phone:s.phone||null,
+    customer_name:s.customer_name, account_number:s.account_number||null, contact_name:s.contact_name||null, phone:s.phone||null, address1:s.address1||null, address2:s.address2||null, city:s.city||null, state:s.state||null, zip:s.zip||null,
     category:"Other", urgency:"Medium", suggested_action:"Visit",
     reason:s.note||("Recurring visit — every "+s.cadence_value+" "+s.cadence_unit),
     status:(s.assigned_to&&s.assigned_to!=="Unassigned")?"Assigned":"New", assigned_to:s.assigned_to||"Unassigned",
@@ -395,6 +403,7 @@ async function load() {
     S.rows = reqs; S.updates = ups; S.conn = "live";
     try { S.comments = await sbGet("cp_comments?select=*&order=created_at.asc"); } catch(_) { S.comments = []; }
     try { S.recurring = await sbGet("cp_recurring?select=*&order=next_due.asc"); } catch(_) { S.recurring = []; }
+    try { S.customers = await sbGet("cp_customers?select=*&order=name.asc"); } catch(_) { S.customers = []; }
     await spawnDueVisits();
     S.lastSync = new Date().toISOString();
   } catch (e) { S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false); }
@@ -407,6 +416,69 @@ function toast(msg, ok=true) {
   setTimeout(()=>{ t.className=""; }, 3000);
 }
 const updatesFor = id => S.updates.filter(u => u.request_id === id);
+function parseCSV(text){
+  const out=[]; const lines=text.split(/\r?\n/).filter(l=>l.trim().length);
+  for(const line of lines){
+    const cells=[]; let cur="", inQ=false;
+    for(let i=0;i<line.length;i++){ const ch=line[i];
+      if(inQ){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else inQ=false; } else cur+=ch; }
+      else { if(ch==='"') inQ=true; else if(ch===','){cells.push(cur);cur="";} else cur+=ch; } }
+    cells.push(cur); out.push(cells.map(c=>c.trim()));
+  }
+  return out;
+}
+function csvToCustomers(text){
+  const rows=parseCSV(text); if(!rows.length) return [];
+  let start=0, idx={name:0,account:1,address1:2,address2:3,city:4,state:5,zip:6,phone:7};
+  const first=rows[0].map(c=>c.toLowerCase());
+  if(first.some(c=>/name|account|address|addr|city|state|zip|phone|customer/.test(c))){
+    start=1;
+    const find=(...keys)=>{ for(let i=0;i<first.length;i++){ if(keys.some(k=>first[i].includes(k))) return i; } return -1; };
+    const a1=find("address 1","address1","addr 1","addr1","street","address"); const a2=find("address 2","address2","addr 2","addr2","suite","unit");
+    idx={ name:find("name","customer"), account:find("account","acct","number","#"), address1:a1, address2:a2, city:find("city"), state:find("state"), zip:find("zip","postal"), phone:find("phone","tel","cell") };
+    // fall back to positions for any not found
+    const def={name:0,account:1,address1:2,address2:3,city:4,state:5,zip:6,phone:7};
+    for(const k in idx){ if(idx[k]<0) idx[k]=def[k]; }
+  }
+  const get=(r,i)=> i>=0 ? (r[i]||"").trim()||null : null;
+  const out=[];
+  for(let i=start;i<rows.length;i++){ const r=rows[i]; const name=(r[idx.name]||"").trim(); if(!name) continue;
+    out.push({ name, account_number:get(r,idx.account), address1:get(r,idx.address1), address2:get(r,idx.address2), city:get(r,idx.city), state:get(r,idx.state), zip:get(r,idx.zip), phone:get(r,idx.phone) }); }
+  return out;
+}
+function addrLines(r){
+  const l1=[r.address1,r.address2].filter(Boolean).join(", ");
+  const l2=[r.city, [r.state,r.zip].filter(Boolean).join(" ").trim()].filter(Boolean).join(", ");
+  return { l1, l2, any:!!(l1||l2) };
+}
+async function replaceCustomers(list){
+  await sbDelete("cp_customers","id=not.is.null");
+  for(let i=0;i<list.length;i+=400){ await sbPost("cp_customers", list.slice(i,i+400)); }
+}
+function attachAutocomplete(inputId, targets){
+  const input=document.getElementById(inputId), box=document.getElementById(inputId+"_ac");
+  if(!input||!box) return;
+  const hide=()=>{ box.style.display="none"; box.innerHTML=""; };
+  input.setAttribute("autocomplete","off");
+  input.addEventListener("input", ()=>{
+    const q=input.value.trim().toLowerCase();
+    if(q.length<2 || !(S.customers||[]).length){ hide(); return; }
+    const matches=(S.customers||[]).filter(c=> (c.name||"").toLowerCase().includes(q) || (c.account_number||"").toLowerCase().includes(q)).slice(0,8);
+    if(!matches.length){ hide(); return; }
+    box.innerHTML=matches.map((c,i)=>{ const a=addrLines(c); return `<div class="acitem" data-i="${i}"><div style="font-weight:600;font-size:13px">${esc(c.name)}</div><div class="tiny muted">${[c.account_number&&('Acct '+c.account_number), a.l1, a.l2, c.phone].filter(Boolean).join(' · ')}</div></div>`; }).join("");
+    box.style.display="block";
+    box.querySelectorAll(".acitem").forEach(el=>{
+      el.addEventListener("mousedown",(e)=>{ e.preventDefault();
+        const c=matches[Number(el.dataset.i)]; input.value=c.name;
+        const set=(id,v)=>{ const t=id&&document.getElementById(id); if(t) t.value=v||""; };
+        set(targets.account,c.account_number); set(targets.phone,c.phone);
+        set(targets.address1,c.address1); set(targets.address2,c.address2); set(targets.city,c.city); set(targets.state,c.state); set(targets.zip,c.zip);
+        hide();
+      });
+    });
+  });
+  input.addEventListener("blur", ()=> setTimeout(hide,150));
+}
 const commentsFor = id => (S.comments||[]).filter(c => c.request_id === id);
 const isMgrNote = c => c.author_role==='manager' || c.author_role==='admin';
 function latestMgrNote(id){ const m=commentsFor(id).filter(isMgrNote); return m.length?m[m.length-1]:null; }
@@ -716,11 +788,16 @@ function viewSubmit() {
   const basicCard = (field) => `
     <div class="card">
       <div class="grid2">
-        <label class="f"><span class="lbl">Customer name <span class="req">*</span></span><input id="s_customer" placeholder="e.g. Coastline Mechanical"/></label>
+        <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span></span><input id="s_customer" placeholder="Start typing…"/><div id="s_customer_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Account # (if known)</span><input id="s_account" placeholder="Optional"/></label>
         <label class="f"><span class="lbl">Contact name</span><input id="s_contact" placeholder="Who to ask for"/></label>
         <label class="f"><span class="lbl">Phone <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_phone" placeholder="e.g. 562-555-0142"/></label>
         <label class="f"><span class="lbl">Email <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_email" type="email" placeholder="e.g. name@company.com"/></label>
+        <label class="f" style="grid-column:1/-1"><span class="lbl">Address 1 <span style="color:#94a3b8;font-weight:400">(auto-fills from customer)</span></span><input id="s_addr1" placeholder="Street address"/></label>
+        <label class="f" style="grid-column:1/-1"><span class="lbl">Address 2</span><input id="s_addr2" placeholder="Suite / unit (optional)"/></label>
+        <label class="f"><span class="lbl">City</span><input id="s_city"/></label>
+        <label class="f"><span class="lbl">State</span><input id="s_state"/></label>
+        <label class="f"><span class="lbl">Zip</span><input id="s_zip"/></label>
         <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="s_branch">${opts(BRANCHES)}</select></label>
         <label class="f"><span class="lbl">${field?"Type of contact":"Suggested action"} <span class="req">*</span></span><select id="s_action">${opts(ACTIONS, field?"Visit":undefined)}</select></label>
         <label class="f"><span class="lbl">Reason / category <span class="req">*</span></span><select id="s_category">${opts(CATEGORIES)}</select></label>
@@ -739,12 +816,19 @@ function viewSubmit() {
   const recurringCard = () => `
     <div class="card">
       <div class="grid2">
-        <label class="f"><span class="lbl">Customer name <span class="req">*</span></span><input id="r_customer" placeholder="e.g. Coastline Mechanical"/></label>
+        <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span></span><input id="r_customer" placeholder="Start typing…"/><div id="r_customer_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Account # (if known)</span><input id="r_account" placeholder="Optional"/></label>
         <label class="f"><span class="lbl">Contact name</span><input id="r_contact" placeholder="Who to ask for"/></label>
         <label class="f"><span class="lbl">Phone</span><input id="r_phone" placeholder="e.g. 562-555-0142"/></label>
         <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="r_branch">${opts(BRANCHES)}</select></label>
         <label class="f"><span class="lbl">Assign to <span class="req">*</span></span><select id="r_assigned">${assigneeOptions(S.persona.name)}</select></label>
+      </div>
+      <label class="f" style="margin-top:12px"><span class="lbl">Address 1 <span style="color:#94a3b8;font-weight:400">(auto-fills from customer)</span></span><input id="r_addr1" placeholder="Street address"/></label>
+      <label class="f" style="margin-top:12px"><span class="lbl">Address 2</span><input id="r_addr2" placeholder="Suite / unit (optional)"/></label>
+      <div class="grid2" style="margin-top:12px">
+        <label class="f"><span class="lbl">City</span><input id="r_city"/></label>
+        <label class="f"><span class="lbl">State</span><input id="r_state"/></label>
+        <label class="f"><span class="lbl">Zip</span><input id="r_zip"/></label>
       </div>
       <div class="grid2" style="margin-top:12px">
         <label class="f"><span class="lbl">Visit every <span class="req">*</span></span><div style="display:flex;gap:8px"><input type="number" id="r_cadval" value="4" min="1" style="max-width:90px"/><select id="r_cadunit">${opts(["weeks","months"],"weeks")}</select></div></label>
@@ -760,12 +844,19 @@ function viewSubmit() {
   const projectCard = () => `
     <div class="card">
       <div class="grid2">
-        <label class="f"><span class="lbl">Project / customer name <span class="req">*</span></span><input id="p_customer" placeholder="e.g. Harbor Medical Center build"/></label>
+        <label class="f" style="position:relative"><span class="lbl">Project / customer name <span class="req">*</span></span><input id="p_customer" placeholder="Start typing…"/><div id="p_customer_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Account # (if known)</span><input id="p_account" placeholder="Optional"/></label>
         <label class="f"><span class="lbl">Site contact</span><input id="p_contact" placeholder="Contact / GC"/></label>
         <label class="f"><span class="lbl">Phone</span><input id="p_phone" placeholder="e.g. 562-555-0142"/></label>
         <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="p_branch">${opts(BRANCHES)}</select></label>
         <label class="f"><span class="lbl">Assign to <span class="req">*</span></span><select id="p_assigned">${assigneeOptions(S.persona.name)}</select></label>
+      </div>
+      <label class="f" style="margin-top:12px"><span class="lbl">Address 1 <span style="color:#94a3b8;font-weight:400">(auto-fills from customer)</span></span><input id="p_addr1" placeholder="Street address"/></label>
+      <label class="f" style="margin-top:12px"><span class="lbl">Address 2</span><input id="p_addr2" placeholder="Suite / unit (optional)"/></label>
+      <div class="grid2" style="margin-top:12px">
+        <label class="f"><span class="lbl">City</span><input id="p_city"/></label>
+        <label class="f"><span class="lbl">State</span><input id="p_state"/></label>
+        <label class="f"><span class="lbl">Zip</span><input id="p_zip"/></label>
       </div>
       <label class="f" style="margin-top:16px"><span class="lbl">What are we monitoring? <span class="req">*</span></span><textarea id="p_reason" placeholder="Scope of the job, what to keep an eye on, who's involved."></textarea></label>
       <label class="f" style="margin-top:12px"><span class="lbl">First visit date <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="p_next"/>${dateChips("p_next")}</label>
@@ -859,6 +950,7 @@ function salesCard(r){
     <div class="kv"><b>Rep:</b> ${r.assigned_to==='Unassigned'?'Unassigned':esc(r.assigned_to)}</div>
     <div class="kv"><b>Submitted by:</b> ${esc(r.submitted_by)} · ${fmtDate(r.submitted_at)}</div>
     <div class="kv"><b>${esc(r.category)}</b>${r.source!=='Field call'?` · ${esc(r.suggested_action)}`:''}</div>
+    ${(()=>{const a=addrLines(r);return a.any?`<div class="kv" style="color:#64748b">📍 ${esc([a.l1,a.l2].filter(Boolean).join(', '))}</div>`:"";})()}
     <div class="rsn">${esc(r.reason)}</div>
   </button>`;
 }
@@ -1111,6 +1203,7 @@ function printDay(){
   const rowsHtml=list.map(r=>`<tr>
     <td class="chk">&#9744;</td>
     <td><b>${esc(r.customer_name)}</b><div class="sub">${esc(r.branch||'')}${person==='Everyone'?' · '+esc(r.assigned_to||'Unassigned'):''}</div></td>
+    <td>${(()=>{const a=addrLines(r);return a.any?(esc(a.l1)+(a.l1&&a.l2?'<br>':'')+esc(a.l2)):'—';})()}</td>
     <td>${esc(r.phone||r.email||'—')}</td>
     <td>${esc(stLabel(r.status))}</td>
     <td>${esc(r.follow_up_topic||r.public_summary||r.reason||'')}</td>
@@ -1118,7 +1211,7 @@ function printDay(){
   const who = person==="Everyone" ? "Team" : esc(person);
   const title=`${who} — ${label}`;
   const css="body{font-family:system-ui,-apple-system,sans-serif;margin:28px;color:#111}h1{font-size:18px;margin:0 0 2px}.m{color:#666;font-size:12px;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;border-bottom:2px solid #111;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em}td{border-bottom:1px solid #ddd;padding:9px 8px;vertical-align:top}.chk{font-size:18px;width:22px}.sub{color:#666;font-size:11px;margin-top:2px}.empty{color:#666;font-style:italic;margin-top:20px}@media print{body{margin:0}}";
-  const table=list.length? `<table><thead><tr><th>Done</th><th>Customer</th><th>Phone / email</th><th>Status</th><th>What to do</th></tr></thead><tbody>${rowsHtml}</tbody></table>` : `<div class="empty">Nothing scheduled for this day.</div>`;
+  const table=list.length? `<table><thead><tr><th>Done</th><th>Customer</th><th>Address</th><th>Phone / email</th><th>Status</th><th>What to do</th></tr></thead><tbody>${rowsHtml}</tbody></table>` : `<div class="empty">Nothing scheduled for this day.</div>`;
   const w=window.open("","_blank");
   if(!w){ toast("Allow pop-ups to print the day.",false); return; }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${css}</style></head><body><h1>${title}</h1><div class="m">Printed ${today()} · ${list.length} stop${list.length===1?'':'s'}</div>${table}<scr`+`ipt>window.onload=function(){window.print();}</scr`+`ipt></body></html>`);
@@ -1146,7 +1239,7 @@ function viewSalesDetail() {
       <div class="card" style="border-left:4px solid ${stageColor(r.status)}">
         <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:12px">
           <div><h1 class="page" style="font-size:18px">${esc(r.customer_name)}</h1>
-          <div class="tiny muted" style="margin-top:4px">${r.account_number?`Acct ${esc(r.account_number)} · `:""}${esc(r.contact_name||'no contact')} · ${esc(r.phone||'no phone')}${r.email?` · ${esc(r.email)}`:""}</div></div>
+          <div class="tiny muted" style="margin-top:4px">${r.account_number?`Acct ${esc(r.account_number)} · `:""}${esc(r.contact_name||'no contact')} · ${esc(r.phone||'no phone')}${r.email?` · ${esc(r.email)}`:""}</div>${(()=>{const a=addrLines(r);return a.any?`<div class="tiny muted" style="margin-top:3px">📍 ${esc(a.l1)}${a.l1&&a.l2?'<br><span style="padding-left:18px">'+esc(a.l2)+'</span>':esc(a.l2)}</div>`:"";})()}</div>
           ${pill(r.status)}
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 12px;background:#f8fafc;border:1px solid #eef2f6;border-radius:10px">
@@ -1277,6 +1370,15 @@ function viewManager() {
       <h1 class="page">Manager view</h1>
       <button class="filters" data-refresh style="border:1px solid #e2e8f0;padding:6px 12px;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:#fff">${I.refresh} Refresh</button>
     </div>
+    ${S.persona.type==="admin"?`<div class="card" style="margin-bottom:20px;border:1px solid #ede9fe;background:#faf9ff">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#7c3aed;display:inline-flex">${I.clip}</span> Customer list</h2>
+      <div class="tiny muted" style="margin-bottom:12px">${(S.customers||[]).length} customer${(S.customers||[]).length===1?'':'s'} loaded for autocomplete. Upload a CSV — columns Name, Account #, Address, Phone — to replace the whole list.</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input type="file" id="cust_file" accept=".csv,text/csv" style="font-size:13px"/>
+        <button class="btn" id="cust_import" ${S.busy?'disabled':''}>${S.busy?'Importing…':'Replace list'}</button>
+      </div>
+      <div class="tiny muted" style="margin-top:8px">A header row is fine. Replacing swaps the entire directory — no merge, no duplicates.</div>
+    </div>`:""}
     <div style="margin-bottom:8px;display:flex;align-items:baseline;gap:8px">
       <span style="font-size:13px;font-weight:600;color:#334155">Needs attention right now</span>
       ${allClear?'<span class="tiny" style="color:#16a34a;font-weight:600">— board is healthy</span>':'<span class="tiny muted">— zero across the board means a healthy shop</span>'}
@@ -1384,6 +1486,19 @@ function bind() {
   document.querySelectorAll("[data-subscope]").forEach(b=>b.onclick=()=>{ S.subScope=b.dataset.subscope; render(); });
   const so=document.querySelector("[data-sort]"); if(so) so.onchange=()=>{ S.sort=so.value; render(); };
   const rf=document.querySelector("[data-refresh]"); if(rf) rf.onclick=()=>{ load(); toast("Refreshed from database."); };
+  const cimp=document.getElementById("cust_import");
+  if(cimp) cimp.onclick=async()=>{
+    const fileEl=document.getElementById("cust_file");
+    const file=fileEl&&fileEl.files&&fileEl.files[0];
+    if(!file){ toast("Choose a CSV file first.",false); return; }
+    let text; try{ text=await file.text(); }catch(_){ toast("Couldn't read that file.",false); return; }
+    const list=csvToCustomers(text);
+    if(!list.length){ toast("No customers found in that file.",false); return; }
+    if(!confirm("Replace the entire customer list with "+list.length+" customer"+(list.length===1?"":"s")+" from this file?")) return;
+    S.busy=true; render();
+    try{ await replaceCustomers(list); toast(list.length+" customers loaded."); S.busy=false; await load(); }
+    catch(e){ toast("Import failed — check the file and try again.",false); S.busy=false; render(); }
+  };
   const cl=document.querySelector("[data-changelog]"); if(cl) cl.onclick=openChangelog;
   document.querySelectorAll("[data-modal-close]").forEach(b=>b.onclick=closeChangelog);
   const ov=document.querySelector("[data-modal-overlay]"); if(ov) ov.onclick=(e)=>{ if(e.target===ov) closeChangelog(); };
@@ -1435,7 +1550,7 @@ function bind() {
   if(sb) sb.onclick=async()=>{
     const g=id=>document.getElementById(id).value.trim();
     const field=S.persona.type!=="employee";
-    const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category:document.getElementById("s_category").value, urgency:document.getElementById("s_urgency").value, reason:g("s_reason") };
+    const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, address1:g("s_addr1")||null, address2:g("s_addr2")||null, city:g("s_city")||null, state:g("s_state")||null, zip:g("s_zip")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category:document.getElementById("s_category").value, urgency:document.getElementById("s_urgency").value, reason:g("s_reason") };
     if(!base.customer_name||!base.reason){ toast("Customer name and the details are required.",false); return; }
     const payload = field
       ? { ...base, source:"Field call", assigned_to:S.persona.name, status:document.getElementById("s_status").value, next_follow_up:document.getElementById("s_next").value||null, follow_up_topic:g("s_topic")||null, first_touched_at:today(), last_action_date:today() }
@@ -1450,13 +1565,16 @@ function bind() {
   };
 
   document.querySelectorAll("[data-submode]").forEach(b=>b.onclick=()=>{ S.submitMode=b.dataset.submode; render(); });
+  attachAutocomplete("s_customer",{account:"s_account",phone:"s_phone",address1:"s_addr1",address2:"s_addr2",city:"s_city",state:"s_state",zip:"s_zip"});
+  attachAutocomplete("p_customer",{account:"p_account",phone:"p_phone",address1:"p_addr1",address2:"p_addr2",city:"p_city",state:"p_state",zip:"p_zip"});
+  attachAutocomplete("r_customer",{account:"r_account",phone:"r_phone",address1:"r_addr1",address2:"r_addr2",city:"r_city",state:"r_state",zip:"r_zip"});
 
   const rb=document.getElementById("r_submit");
   if(rb) rb.onclick=async()=>{
     const g=id=>document.getElementById(id).value.trim();
     const customer=g("r_customer"), first=document.getElementById("r_first").value, note=g("r_note");
     if(!customer||!first||!note){ toast("Customer, first visit date, and the visit note are required.",false); return; }
-    const row={ customer_name:customer, account_number:g("r_account")||null, contact_name:g("r_contact")||null, phone:g("r_phone")||null,
+    const row={ customer_name:customer, account_number:g("r_account")||null, contact_name:g("r_contact")||null, phone:g("r_phone")||null, address1:g("r_addr1")||null, address2:g("r_addr2")||null, city:g("r_city")||null, state:g("r_state")||null, zip:g("r_zip")||null,
       branch:document.getElementById("r_branch").value, assigned_to:document.getElementById("r_assigned").value,
       cadence_value:Number(document.getElementById("r_cadval").value)||4, cadence_unit:document.getElementById("r_cadunit").value,
       next_due:first, note:note, active:true, created_by:S.persona.name };
@@ -1475,7 +1593,7 @@ function bind() {
     const g=id=>document.getElementById(id).value.trim();
     const customer=g("p_customer"), reason=g("p_reason"), assigned=document.getElementById("p_assigned").value;
     if(!customer||!reason){ toast("Project name and what you're monitoring are required.",false); return; }
-    const payload={ submitted_by:S.persona.name, customer_name:customer, account_number:g("p_account")||null, contact_name:g("p_contact")||null, phone:g("p_phone")||null,
+    const payload={ submitted_by:S.persona.name, customer_name:customer, account_number:g("p_account")||null, contact_name:g("p_contact")||null, phone:g("p_phone")||null, address1:g("p_addr1")||null, address2:g("p_addr2")||null, city:g("p_city")||null, state:g("p_state")||null, zip:g("p_zip")||null,
       branch:document.getElementById("p_branch").value, suggested_action:"Visit", category:"Large job / project", urgency:"Medium", reason:reason,
       source:"Project", assigned_to:assigned, status:(assigned&&assigned!=="Unassigned")?"Assigned":"New",
       next_follow_up:document.getElementById("p_next").value||null, first_touched_at:null, last_action_date:today() };
