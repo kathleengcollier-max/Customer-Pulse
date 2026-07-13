@@ -148,6 +148,8 @@
   .acitem { padding:8px 12px; cursor:pointer; border-bottom:1px solid #f6f8fa; }
   .acitem:hover { background:#f1f5f9; }
   .acitem:last-child { border-bottom:none; }
+  .btn-ghost { background:#fff; color:#475569; border:1px solid #e2e8f0; border-radius:9px; padding:9px 14px; font-size:14px; font-weight:600; cursor:pointer; }
+  .btn-ghost:hover { background:#f8fafc; border-color:#cbd5e1; }
 
   .search { position:relative; margin-bottom:14px; max-width:380px; }
   .search input { width:100%; padding:9px 32px 9px 34px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; }
@@ -461,13 +463,14 @@ function attachAutocomplete(inputId, targets){
   const hide=()=>{ box.style.display="none"; box.innerHTML=""; };
   input.setAttribute("autocomplete","off");
   input.addEventListener("input", ()=>{
-    const q=input.value.trim().toLowerCase();
-    if(q.length<2 || !(S.customers||[]).length){ hide(); return; }
-    const matches=(S.customers||[]).filter(c=> (c.name||"").toLowerCase().includes(q) || (c.account_number||"").toLowerCase().includes(q)).slice(0,8);
-    if(!matches.length){ hide(); return; }
+    const norm=s=>(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const nq=norm(input.value);
+    if(nq.length<2 || !(S.customers||[]).length){ hide(); return; }
+    const matches=(S.customers||[]).filter(c=> norm(c.name).includes(nq) || norm(c.account_number).includes(nq)).slice(0,8);
+    if(!matches.length){ box.innerHTML=`<div class="acitem" style="cursor:default"><div class="tiny muted">No match in the ${(S.customers||[]).length} customers on file — type it in manually.</div></div>`; box.style.display="block"; return; }
     box.innerHTML=matches.map((c,i)=>{ const a=addrLines(c); return `<div class="acitem" data-i="${i}"><div style="font-weight:600;font-size:13px">${esc(c.name)}</div><div class="tiny muted">${[c.account_number&&('Acct '+c.account_number), a.l1, a.l2, c.phone].filter(Boolean).join(' · ')}</div></div>`; }).join("");
     box.style.display="block";
-    box.querySelectorAll(".acitem").forEach(el=>{
+    box.querySelectorAll(".acitem[data-i]").forEach(el=>{
       el.addEventListener("mousedown",(e)=>{ e.preventDefault();
         const c=matches[Number(el.dataset.i)]; input.value=c.name;
         const set=(id,v)=>{ const t=id&&document.getElementById(id); if(t) t.value=v||""; };
@@ -788,7 +791,7 @@ function viewSubmit() {
   const basicCard = (field) => `
     <div class="card">
       <div class="grid2">
-        <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span></span><input id="s_customer" placeholder="Start typing…"/><div id="s_customer_ac" class="acbox"></div></label>
+        <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span> ${(S.customers||[]).length?`<span style="color:#94a3b8;font-weight:400">· ${(S.customers||[]).length} on file</span>`:`<span style="color:#dc2626;font-weight:400">· none loaded</span>`}</span><input id="s_customer" placeholder="Start typing…"/><div id="s_customer_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Account # (if known)</span><input id="s_account" placeholder="Optional"/></label>
         <label class="f"><span class="lbl">Contact name</span><input id="s_contact" placeholder="Who to ask for"/></label>
         <label class="f"><span class="lbl">Phone <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_phone" placeholder="e.g. 562-555-0142"/></label>
@@ -809,14 +812,14 @@ function viewSubmit() {
       ${field?`<label class="f" style="margin-top:12px"><span class="lbl">Follow-up topic <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_topic" placeholder="The specific thing to raise next time"/></label>`:""}
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
         <span class="tiny muted">${field?`Logging as <b style="color:#475569">${esc(S.persona.name)}</b> — assigned to you`:`Submitting as <b style="color:#475569">${esc(S.persona.name)}</b>`}</span>
-        <button class="btn" id="s_submit">${I.send} ${S.busy?(field?"Logging…":"Submitting…"):(field?"Log call":"Submit request")}</button>
+        <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="s_submit">${I.send} ${S.busy?(field?"Logging…":"Submitting…"):(field?"Log call":"Submit request")}</button></div>
       </div>
     </div>`;
 
   const recurringCard = () => `
     <div class="card">
       <div class="grid2">
-        <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span></span><input id="r_customer" placeholder="Start typing…"/><div id="r_customer_ac" class="acbox"></div></label>
+        <label class="f" style="position:relative"><span class="lbl">Customer name <span class="req">*</span> ${(S.customers||[]).length?`<span style="color:#94a3b8;font-weight:400">· ${(S.customers||[]).length} on file</span>`:`<span style="color:#dc2626;font-weight:400">· none loaded</span>`}</span><input id="r_customer" placeholder="Start typing…"/><div id="r_customer_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Account # (if known)</span><input id="r_account" placeholder="Optional"/></label>
         <label class="f"><span class="lbl">Contact name</span><input id="r_contact" placeholder="Who to ask for"/></label>
         <label class="f"><span class="lbl">Phone</span><input id="r_phone" placeholder="e.g. 562-555-0142"/></label>
@@ -837,14 +840,14 @@ function viewSubmit() {
       <label class="f" style="margin-top:16px"><span class="lbl">What should happen on each visit? <span class="req">*</span></span><textarea id="r_note" placeholder="e.g. Check stock levels, touch base with the buyer, walk the counter."></textarea></label>
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
         <span class="tiny muted">The first card drops on the rep's board now. Completing a visit auto-schedules the next.</span>
-        <button class="btn" id="r_submit">${I.send} ${S.busy?"Scheduling…":"Schedule visits"}</button>
+        <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="r_submit">${I.send} ${S.busy?"Scheduling…":"Schedule visits"}</button></div>
       </div>
     </div>`;
 
   const projectCard = () => `
     <div class="card">
       <div class="grid2">
-        <label class="f" style="position:relative"><span class="lbl">Project / customer name <span class="req">*</span></span><input id="p_customer" placeholder="Start typing…"/><div id="p_customer_ac" class="acbox"></div></label>
+        <label class="f" style="position:relative"><span class="lbl">Project / customer name <span class="req">*</span> ${(S.customers||[]).length?`<span style="color:#94a3b8;font-weight:400">· ${(S.customers||[]).length} on file</span>`:`<span style="color:#dc2626;font-weight:400">· none loaded</span>`}</span><input id="p_customer" placeholder="Start typing…"/><div id="p_customer_ac" class="acbox"></div></label>
         <label class="f"><span class="lbl">Account # (if known)</span><input id="p_account" placeholder="Optional"/></label>
         <label class="f"><span class="lbl">Site contact</span><input id="p_contact" placeholder="Contact / GC"/></label>
         <label class="f"><span class="lbl">Phone</span><input id="p_phone" placeholder="e.g. 562-555-0142"/></label>
@@ -862,7 +865,7 @@ function viewSubmit() {
       <label class="f" style="margin-top:12px"><span class="lbl">First visit date <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="p_next"/>${dateChips("p_next")}</label>
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
         <span class="tiny muted">Creates an open project card the owner visits and tracks over time.</span>
-        <button class="btn" id="p_submit">${I.send} ${S.busy?"Creating…":"Create project"}</button>
+        <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="p_submit">${I.send} ${S.busy?"Creating…":"Create project"}</button></div>
       </div>
     </div>`;
 
@@ -1565,6 +1568,14 @@ function bind() {
   };
 
   document.querySelectorAll("[data-submode]").forEach(b=>b.onclick=()=>{ S.submitMode=b.dataset.submode; render(); });
+  document.querySelectorAll("[data-clearform]").forEach(b=>b.onclick=()=>{
+    const card=b.closest(".card"); if(!card) return;
+    card.querySelectorAll("input").forEach(el=>{ if(el.type!=="file") el.value=""; });
+    card.querySelectorAll("textarea").forEach(el=>el.value="");
+    const cad=card.querySelector("#r_cadval"); if(cad) cad.value="4";
+    card.querySelectorAll(".acbox").forEach(el=>{ el.style.display="none"; el.innerHTML=""; });
+    const first=card.querySelector("input"); if(first) first.focus();
+  });
   attachAutocomplete("s_customer",{account:"s_account",phone:"s_phone",address1:"s_addr1",address2:"s_addr2",city:"s_city",state:"s_state",zip:"s_zip"});
   attachAutocomplete("p_customer",{account:"p_account",phone:"p_phone",address1:"p_addr1",address2:"p_addr2",city:"p_city",state:"p_state",zip:"p_zip"});
   attachAutocomplete("r_customer",{account:"r_account",phone:"r_phone",address1:"r_addr1",address2:"r_addr2",city:"r_city",state:"r_state",zip:"r_zip"});
