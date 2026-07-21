@@ -228,6 +228,17 @@
   .attncard.ok .an { color:#16a34a; } .attncard.bad .an { color:#e11d48; }
   .attncard .al { font-size:13px; font-weight:600; color:#334155; margin-top:6px; }
   .attncard .as { font-size:11px; color:#64748b; margin-top:2px; }
+  .snapgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+  @media(max-width:640px){ .snapgrid { grid-template-columns:repeat(2,1fr); } }
+  .snapbox { border-radius:12px; padding:12px 14px; border:1px solid; transition:transform .08s; }
+  .snapbox[data-special]:hover { transform:translateY(-1px); }
+  .snapbox.ok { background:#f8fafc; border-color:#e2e8f0; }
+  .snapbox.bad { background:#fff1f2; border-color:#fecdd3; }
+  .snapbox.warn { background:#fff7ed; border-color:#fed7aa; }
+  .snapbox .sn { font-size:24px; font-weight:800; line-height:1; }
+  .snapbox.ok .sn { color:#94a3b8; } .snapbox.bad .sn { color:#e11d48; } .snapbox.warn .sn { color:#ea580c; }
+  .snapbox .sl { font-size:12px; font-weight:600; color:#334155; margin-top:5px; }
+  .snapbox .ss { font-size:10px; color:#64748b; margin-top:2px; }
 
   .cmt { display:flex; gap:10px; margin-bottom:12px; }
   .av { width:30px; height:30px; border-radius:50%; flex:none; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; }
@@ -307,6 +318,14 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.7", date:"2026-07-16", title:"Your own attention snapshot", items:[
+    "The Sales Dashboard now shows four at-a-glance boxes for your own work: Due today, Overdue, Aging 5+ days, and No follow-up date",
+    "Tap any box to drill into just those cards — the same quick view managers have, scoped to you",
+    "Follows whatever the board is showing, so switch to Everyone or Unassigned and the snapshot follows" ]},
+  { v:"3.6", date:"2026-07-16", title:"Calendar gets its own tab", items:[
+    "The calendar is now its own tab in the menu, not tucked inside the Sales Dashboard",
+    "It opens on Activity (what happened) by default — flip to Follow-ups for what's coming up",
+    "Reports moved to sit after Manager View in the menu" ]},
   { v:"3.5", date:"2026-07-16", title:"Older visits show on the activity calendar", items:[
     "Field and tech calls logged before the app recorded a first touch now appear on the Activity calendar on the day they were logged",
     "So a visit that only lives as the card itself no longer goes missing from the day view" ]},
@@ -1089,8 +1108,9 @@ function render() {
     { id:"submit", label:"Submit a Request", icon:I.send, show:p.type!=="viewer" },
     { id:"mine", label:"My Submissions", icon:I.clip, show:p.type!=="viewer" },
     { id:"sales", label:"Sales Dashboard", icon:I.dash, show:p.type!=="employee" },
-    { id:"reports", label:"Reports", icon:I.trend, show:p.type!=="employee" },
+    { id:"calendar", label:"Calendar", icon:I.clock||I.dash, show:p.type!=="employee" },
     { id:"manager", label:"Manager View", icon:I.chart, show:["manager","admin","viewer"].includes(p.type) },
+    { id:"reports", label:"Reports", icon:I.trend, show:p.type!=="employee" },
     { id:"admin", label:"Admin", icon:I.gear||I.bldg, show:p.type==="admin" },
     { id:"activity", label:"Activity", icon:I.activity, show:p.type==="admin" },
   ].filter(t=>t.show);
@@ -1105,6 +1125,7 @@ function render() {
   else if (S.tab==="submit") body = viewSubmit();
   else if (S.tab==="mine") body = S.selectedId ? viewEmployeeDetail() : viewMine();
   else if (S.tab==="sales") body = S.selectedId ? viewSalesDetail() : viewSales();
+  else if (S.tab==="calendar") body = viewCalendarPage();
   else if (S.tab==="admin") body = viewAdmin();
   else if (S.tab==="reports") body = viewReports();
   else if (S.tab==="manager") body = viewManager();
@@ -1468,18 +1489,19 @@ function viewEmployeeDetail() {
     </div>`;
 }
 
+function viewCalendarPage(){
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+    <h1 class="page">Calendar</h1>
+    <button class="qbtn" data-refresh>${I.refresh} Refresh</button>
+  </div>
+  ${viewCalendar()}`;
+}
 function viewSales() {
   const view = S.salesView || "cards";
   const needsCount = cardsWithNotes().filter(x=>x.status==="needs" && x.r.assigned_to===S.persona.name).length;
-  const viewToggle = `<div class="modeseg"><button data-salesview="cards" class="${view==='cards'?'active':''}">Cards</button><button data-salesview="calendar" class="${view==='calendar'?'active':''}">Calendar</button><button data-salesview="notes" class="${view==='notes'?'active':''}">Manager notes${needsCount?`<span class="segcount">${needsCount}</span>`:''}</button></div>`;
-  if(view==="calendar"){
-    return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
-      <h1 class="page">Sales follow-up dashboard</h1>
-      ${viewToggle}
-    </div>
-    ${viewCalendar()}`;
-  }
+  const viewToggle = `<div class="modeseg"><button data-salesview="cards" class="${view==='cards'?'active':''}">Cards</button><button data-salesview="notes" class="${view==='notes'?'active':''}">Manager notes${needsCount?`<span class="segcount">${needsCount}</span>`:''}</button></div>`;
+  if(view==="calendar"){ S.salesView="cards"; }  // calendar moved to its own tab
   if(view==="notes"){
     return `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
@@ -1489,7 +1511,7 @@ function viewSales() {
     ${viewNotes()}`;
   }
   const f = S.filter;
-  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days", nofollowup:"No follow-up date set" };
+  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days", nofollowup:"No follow-up date set", today:"Due today" };
   let list;
   if(S.special){
     list = S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
@@ -1497,6 +1519,7 @@ function viewSales() {
     else if(S.special==="overdue") list=list.filter(r=>r.next_follow_up && r.next_follow_up < today());
     else if(S.special==="aging") list=list.filter(r=>days(r.submitted_at,today())>5);
     else if(S.special==="nofollowup") list=list.filter(r=>!r.next_follow_up && !isUpcomingVisit(r));
+    else if(S.special==="today") list=list.filter(r=>r.next_follow_up===today());
   } else {
     list = S.rows.filter(r => f==="All"?true : f==="Open"?OPEN_STATUSES.includes(r.status) : f==="Closed"?!OPEN_STATUSES.includes(r.status) : r.status===f);
     list = list.filter(inScope);
@@ -1529,13 +1552,24 @@ function viewSales() {
     ${searchBar("Search customer, account, or salesperson…")}
     ${(()=>{
       if(S.special) return "";
-      // Open cards in the current scope with no next step set — the ones that quietly fall through.
-      const stranded=S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status) && !r.next_follow_up && !isUpcomingVisit(r));
-      if(!stranded.length) return "";
-      return `<div style="display:flex;align-items:center;gap:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:12px">
-        <span style="color:#ea580c;display:inline-flex;flex:none">${I.warn}</span>
-        <span class="tiny" style="color:#9a3412"><b>${stranded.length} open ${stranded.length===1?'card has':'cards have'} no follow-up date.</b> Without one they won't surface on the calendar or in overdue — easy to lose.</span>
-        <button class="qbtn" data-special="nofollowup" style="margin-left:auto;white-space:nowrap">Show ${stranded.length===1?'it':'them'}</button>
+      // Snapshot of what needs attention — scoped to whatever the board is showing (your work by default).
+      const mine=S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
+      const overdueN=mine.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
+      const agingN=mine.filter(r=>days(r.submitted_at,today())>5).length;
+      const nofollowN=mine.filter(r=>!r.next_follow_up && !isUpcomingVisit(r)).length;
+      const todayN=mine.filter(r=>r.next_follow_up===today()).length;
+      const box=(n,label,sub,jump,tone)=>{
+        const good=n===0;
+        const toneClass = good?"ok":(tone==="warn"?"warn":"bad");
+        return good
+          ? `<div class="snapbox ok"><div class="sn">0</div><div class="sl">${label}</div><div class="ss">all clear</div></div>`
+          : `<div class="snapbox ${toneClass}" ${jump?`data-special="${jump}" style="cursor:pointer"`:''}><div class="sn">${n}</div><div class="sl">${label}</div><div class="ss">${sub}${jump?' · view →':''}</div></div>`;
+      };
+      return `<div class="snapgrid">
+        ${box(todayN,"Due today","follow up now","today","warn")}
+        ${box(overdueN,"Overdue","past the promised date","overdue")}
+        ${box(agingN,"Aging 5+ days","open and sitting","aging")}
+        ${box(nofollowN,"No follow-up date","no next step set","nofollowup")}
       </div>`;
     })()}
     ${S.special?`<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;margin-bottom:12px"><span class="tiny" style="font-weight:600;color:#1e40af">Filtered: ${SPECIAL[S.special]||S.special} (${list.length})</span><button class="linkish" data-clearspecial style="margin-left:auto">Clear ✕</button></div>`:""}
@@ -1562,13 +1596,13 @@ function viewCalendar(){
   const now=new Date();
   if(S.calY==null){ S.calY=now.getFullYear(); S.calM=now.getMonth(); }
   const view=S.calView||"month";
-  const mode=S.calMode||"followup"; // followup = scheduled next steps; activity = what actually happened
+  const mode=S.calMode||"activity"; // activity = what actually happened; followup = scheduled next steps
   const st=S.calStatus||"open";
   const person=S.calPerson||"Everyone";
   const people=["Everyone",...salespeopleList().filter(p=>p!=="Unassigned"),"Unassigned"];
   const personSel=`<select class="sortsel" data-calperson>${people.map(p=>`<option ${p===person?'selected':''}>${esc(p)}</option>`).join("")}</select>`;
   const viewSeg=`<div class="modeseg"><button data-calview="month" class="${view==='month'?'active':''}">Month</button><button data-calview="day" class="${view==='day'?'active':''}">Day</button></div>`;
-  const modeSeg=`<div class="modeseg"><button data-calmode="followup" class="${mode==='followup'?'active':''}">Follow-ups</button><button data-calmode="activity" class="${mode==='activity'?'active':''}">Activity</button></div>`;
+  const modeSeg=`<div class="modeseg"><button data-calmode="activity" class="${mode==='activity'?'active':''}">Activity</button><button data-calmode="followup" class="${mode==='followup'?'active':''}">Follow-ups</button></div>`;
 
   // --- ACTIVITY MODE: plot touches by the day they were logged ---
   if(mode==="activity"){
