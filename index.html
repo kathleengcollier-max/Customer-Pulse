@@ -307,6 +307,9 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.1", date:"2026-07-16", title:"A tidier Manager view", items:[
+    "Admin-only tools — People & roles, the customer and manufacturer uploads, and the ideas inbox — moved to their own Admin tab",
+    "Manager view is now just the work: the dashboard, summaries, and what needs attention" ]},
   { v:"3.0", date:"2026-07-16", title:"Everyone has their own login", items:[
     "Sign in with your own email and password — no more tapping a name to switch",
     "You see exactly your access, and everything you do is logged as really you",
@@ -1074,6 +1077,7 @@ function render() {
     { id:"sales", label:"Sales Dashboard", icon:I.dash, show:p.type!=="employee" },
     { id:"reports", label:"Reports", icon:I.trend, show:p.type!=="employee" },
     { id:"manager", label:"Manager View", icon:I.chart, show:["manager","admin","viewer"].includes(p.type) },
+    { id:"admin", label:"Admin", icon:I.gear||I.bldg, show:p.type==="admin" },
     { id:"activity", label:"Activity", icon:I.activity, show:p.type==="admin" },
   ].filter(t=>t.show);
 
@@ -1087,6 +1091,7 @@ function render() {
   else if (S.tab==="submit") body = viewSubmit();
   else if (S.tab==="mine") body = S.selectedId ? viewEmployeeDetail() : viewMine();
   else if (S.tab==="sales") body = S.selectedId ? viewSalesDetail() : viewSales();
+  else if (S.tab==="admin") body = viewAdmin();
   else if (S.tab==="reports") body = viewReports();
   else if (S.tab==="manager") body = viewManager();
   else if (S.tab==="activity") body = viewActivity();
@@ -2237,43 +2242,17 @@ function ideasCard(){
     : `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing yet. The lightbulb sits in the header next to the version \u2014 on every screen, for everyone.</div>`}
   </div>`;
 }
-function viewManager() {
-  const rows = S.rows;
-  const open = rows.filter(r=>OPEN_STATUSES.includes(r.status));
-  const won = rows.filter(r=>r.status==="Won");
-  const openIds = new Set(open.map(r=>r.id));
-  const pipeline = S.updates.filter(u=>openIds.has(u.request_id)).reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
-  const touched = rows.filter(r=>r.first_touched_at);
-  const avg = touched.length?(touched.reduce((s,r)=>s+days(r.submitted_at,r.first_touched_at),0)/touched.length).toFixed(1):"—";
-  const byBranch = BRANCHES.map(b=>({b,n:rows.filter(r=>r.branch===b).length}));
-  const maxB = Math.max(1,...byBranch.map(x=>x.n));
-  const aging = open.map(r=>({...r,age:days(r.submitted_at,today())})).sort((a,b)=>b.age-a.age);
-  const byPerson = Object.entries(rows.reduce((m,r)=>{const k=r.submitted_by||'Unknown';m[k]=(m[k]||0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]);
-  const maxP = Math.max(1,...byPerson.map(x=>x[1]));
-  const unassigned = open.filter(r=>r.assigned_to==='Unassigned').length;
-  const overdue = open.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
-  const aging5 = open.filter(r=>days(r.submitted_at,today())>5).length;
-  const attn=(n,label,sub,jump)=>{const good=n===0;return good
-    ? `<div class="attncard ok"><div class="an">${n}</div><div class="al">${label}</div><div class="as">all clear</div></div>`
-    : `<div class="attncard bad" data-mgr-jump="${jump}" style="cursor:pointer"><div class="an">${n}</div><div class="al">${label}</div><div class="as">${sub}</div><div class="tiny" style="margin-top:6px;font-weight:600;opacity:.85">View →</div></div>`;};
-  const allClear = unassigned===0 && overdue===0 && aging5===0;
-  const quotedTotal = S.updates.reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
-  const orderedTotal = S.updates.reduce((s,u)=>s+(Number(u.ordered_value)||0),0);
-  const hitRate = quotedTotal>0 ? Math.round(orderedTotal/quotedTotal*100)+"%" : "—";
-  const money = n => "$"+Math.round(n/1000)+"k";
-  const fromField = rows.filter(r=>r.source==='Field call').length;
-  const fromCounter = rows.length - fromField;
-  const stat=(k,v,s,color)=>`<div class="card stat"><div class="k">${k}</div><div class="v" style="${color||''}">${v}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
-
+function viewAdmin(){
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <h1 class="page">Manager view</h1>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:12px">
+      <h1 class="page">Admin</h1>
       <button class="filters" data-refresh style="border:1px solid #e2e8f0;padding:6px 12px;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:#fff">${I.refresh} Refresh</button>
     </div>
-    ${S.persona.type==="admin"?`${ideasCard()}
+    <div class="tiny muted" style="margin-bottom:16px">Team &amp; access, the data uploads, and what people have sent in. Admin only.</div>
+${ideasCard()}
     <div class="card" style="margin-bottom:20px;border:1px solid #e0f2fe;background:#f9fdff">
       <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#0284c7;display:inline-flex">${I.bldg}</span> People &amp; roles</h2>
-      <div class="tiny muted" style="margin-bottom:12px">Add someone and give them a role — it flows everywhere: the persona switcher, assignment dropdowns, calendar filters, and reports. A <b>Salesperson</b> sees sales reasons; <b>Tech Support</b> sees technical ones.${(S.people||[]).some(x=>x.active&&!x.email)?` <span style="color:#b45309;font-weight:600">Email is what will connect a login to a person — fill them in before you switch logins on.</span>`:""}</div>
+      <div class="tiny muted" style="margin-bottom:12px">Add someone and give them a role — it flows everywhere: who can sign in, what they're assigned, calendar filters, and reports. A <b>Salesperson</b> sees sales reasons; <b>Tech Support</b> sees technical ones.${(S.people||[]).some(x=>x.active&&!x.email)?` <span style="color:#b45309;font-weight:600">Anyone without an email can't sign in — their email must match their login.</span>`:""}</div>
       ${(S.people||[]).length? `<div style="margin-bottom:4px">${(S.people||[]).map(x=>`
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
           <span style="width:9px;height:9px;border-radius:50%;background:${x.active?accentFor(x.role):'#cbd5e1'};flex:none"></span>
@@ -2320,7 +2299,41 @@ function viewManager() {
         ${S.pendingMfr?`<button class="btn-ghost" id="mfr_clear" ${S.busy?'disabled':''}>Cancel</button>`:''}
       </div>
       <div class="tiny muted" style="margin-top:8px">Duplicates are dropped automatically. Replacing swaps the entire list.</div>
-    </div>`:""}
+    </div>`;
+}
+function viewManager() {
+  const rows = S.rows;
+  const open = rows.filter(r=>OPEN_STATUSES.includes(r.status));
+  const won = rows.filter(r=>r.status==="Won");
+  const openIds = new Set(open.map(r=>r.id));
+  const pipeline = S.updates.filter(u=>openIds.has(u.request_id)).reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
+  const touched = rows.filter(r=>r.first_touched_at);
+  const avg = touched.length?(touched.reduce((s,r)=>s+days(r.submitted_at,r.first_touched_at),0)/touched.length).toFixed(1):"—";
+  const byBranch = BRANCHES.map(b=>({b,n:rows.filter(r=>r.branch===b).length}));
+  const maxB = Math.max(1,...byBranch.map(x=>x.n));
+  const aging = open.map(r=>({...r,age:days(r.submitted_at,today())})).sort((a,b)=>b.age-a.age);
+  const byPerson = Object.entries(rows.reduce((m,r)=>{const k=r.submitted_by||'Unknown';m[k]=(m[k]||0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]);
+  const maxP = Math.max(1,...byPerson.map(x=>x[1]));
+  const unassigned = open.filter(r=>r.assigned_to==='Unassigned').length;
+  const overdue = open.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
+  const aging5 = open.filter(r=>days(r.submitted_at,today())>5).length;
+  const attn=(n,label,sub,jump)=>{const good=n===0;return good
+    ? `<div class="attncard ok"><div class="an">${n}</div><div class="al">${label}</div><div class="as">all clear</div></div>`
+    : `<div class="attncard bad" data-mgr-jump="${jump}" style="cursor:pointer"><div class="an">${n}</div><div class="al">${label}</div><div class="as">${sub}</div><div class="tiny" style="margin-top:6px;font-weight:600;opacity:.85">View →</div></div>`;};
+  const allClear = unassigned===0 && overdue===0 && aging5===0;
+  const quotedTotal = S.updates.reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
+  const orderedTotal = S.updates.reduce((s,u)=>s+(Number(u.ordered_value)||0),0);
+  const hitRate = quotedTotal>0 ? Math.round(orderedTotal/quotedTotal*100)+"%" : "—";
+  const money = n => "$"+Math.round(n/1000)+"k";
+  const fromField = rows.filter(r=>r.source==='Field call').length;
+  const fromCounter = rows.length - fromField;
+  const stat=(k,v,s,color)=>`<div class="card stat"><div class="k">${k}</div><div class="v" style="${color||''}">${v}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h1 class="page">Manager view</h1>
+      <button class="filters" data-refresh style="border:1px solid #e2e8f0;padding:6px 12px;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:#fff">${I.refresh} Refresh</button>
+    </div>
     <div style="margin-bottom:8px;display:flex;align-items:baseline;gap:8px">
       <span style="font-size:13px;font-weight:600;color:#334155">Needs attention right now</span>
       ${allClear?'<span class="tiny" style="color:#16a34a;font-weight:600">— board is healthy</span>':'<span class="tiny muted">— zero across the board means a healthy shop</span>'}
