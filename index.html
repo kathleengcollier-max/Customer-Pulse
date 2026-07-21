@@ -24,7 +24,7 @@
   .conn.live { color:#34d399; } .conn.off { color:#fb7185; }
   .cdot { width:6px; height:6px; border-radius:50%; background:currentColor; }
 
-  .personas { display:flex; background:#1e293b; border-radius:10px; padding:4px; }
+  .personas { display:flex; flex-wrap:wrap; background:#1e293b; border-radius:10px; padding:4px; }
   .personas button { border:none; background:transparent; color:#cbd5e1; font-size:12px; font-weight:500; padding:6px 12px; border-radius:7px; }
   .personas button.active { background:#fff; color:#0f172a; }
   .view-as { color:#94a3b8; font-size:12px; margin-right:4px; }
@@ -151,6 +151,26 @@
   .btn-ghost { background:#fff; color:#475569; border:1px solid #e2e8f0; border-radius:9px; padding:9px 14px; font-size:14px; font-weight:600; cursor:pointer; }
   .btn-ghost:hover { background:#f8fafc; border-color:#cbd5e1; }
   input.autofilled { background:#f0fdf4; border-color:#bbf7d0; }
+  .dropzone { border:2px dashed #ddd6fe; border-radius:12px; background:#fdfcff; padding:22px 16px; text-align:center; cursor:pointer; transition:background .12s, border-color .12s; }
+  .dropzone:hover { border-color:#a78bfa; background:#faf8ff; }
+  .dropzone.over { border-color:#7c3aed; background:#f3e8ff; border-style:solid; }
+  .dropzone.ready { border-color:#86efac; background:#f0fdf4; border-style:solid; }
+  .dz-big { font-size:14px; font-weight:600; color:#4c1d95; }
+  .dz-sub { font-size:12px; color:#94a3b8; margin-top:3px; }
+  .colwrap { display:flex; align-items:flex-end; gap:3px; height:150px; padding-top:6px; }
+  .colslot { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; height:100%; position:relative; }
+  .colslot .colbar { width:100%; border-radius:4px 4px 0 0; background:var(--accent); min-height:2px; transition:opacity .12s; }
+  .colslot:hover .colbar { opacity:.75; }
+  .colslot .colval { position:absolute; top:-2px; left:0; right:0; text-align:center; font-size:9px; font-weight:700; color:#475569; opacity:0; }
+  .colslot:hover .colval { opacity:1; }
+  .collabels { display:flex; gap:3px; margin-top:5px; }
+  .collabel { flex:1; min-width:0; text-align:center; font-size:9px; color:#94a3b8; overflow:hidden; white-space:nowrap; }
+  .hbrow { display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+  .hblabel { width:110px; flex:none; font-size:12px; color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hbtrack { flex:1; height:22px; background:#f1f5f9; border-radius:6px; overflow:hidden; }
+  .hbfill { height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding:0 7px; color:#fff; font-size:11px; font-weight:700; white-space:nowrap; }
+  .splitbar { display:flex; height:26px; border-radius:7px; overflow:hidden; background:#f1f5f9; }
+  .splitseg { display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; white-space:nowrap; }
 
   .search { position:relative; margin-bottom:14px; max-width:380px; }
   .search input { width:100%; padding:9px 32px 9px 34px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; }
@@ -247,6 +267,37 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"2.4", date:"2026-07-16", title:"Point someone at something", items:[
+    "Managers get a Lead button \u2014 hand work to someone without pretending you made a call. No touch logged, no time recorded.",
+    "Juan can refer a technical issue to Whitney, and Whitney can refer a sales opening to Juan, instead of logging a call they didn't make",
+    "A lead has to have someone's name on it \u2014 unowned work just sits there",
+    "Leads and referrals show on the board with their own badge, and in the Activity report under where work comes from" ]},
+  { v:"2.3", date:"2026-07-16", title:"Hand a call to someone else", items:[
+    "Managers can now assign a field or tech call to whoever should follow up, right on the form \u2014 it no longer always lands on you",
+    "The handoff shows in the touch history, so the person picking it up can see who called and what happened" ],
+    thanks:["Stephen"] },
+  { v:"2.2", date:"2026-07-16", title:"Tell me what would help", items:[
+    "There's a \u{1F4A1} lightbulb in the header now \u2014 tap it any time something annoys you or an idea strikes",
+    "One box, that's it. It already knows who you are and what screen you were on, so just say the thing",
+    "Small ideas are the best ones \u2014 an extra tap you keep making, a button in the wrong place",
+    "You'll see what you've sent, and where it got to" ]},
+  { v:"2.1", date:"2026-07-16", title:"Faster, and fixable", items:[
+    "The app is much quicker to respond — logging a touch no longer re-downloads the whole customer directory",
+    "Tap the time on a touch you logged to correct it, or add time to an older one that never had any",
+    "Admins can remove a touch that landed on the wrong card" ]},
+  { v:"2.0", date:"2026-07-16", title:"Technical support, time tracking & reporting", items:[
+    "Technical support is here \u2014 Whitney logs tech calls, projects and recurring visits alongside sales, on the same board",
+    "Tech cases capture manufacturer, model, serial and case #, and they get resolved rather than won or lost",
+    "The counter form is now \u201cCustomer Requests\u201d, with reasons grouped into Sales and Technical \u2014 pick a technical one and it routes to tech",
+    "Salespeople see sales reasons, tech support sees technical ones",
+    "Time spent is now logged on every touch \u2014 including the very first call, which used to slip through entirely",
+    "New Reports tab: Time, Customers, Activity, Outcomes and Tech \u2014 as charts on screen, or a printable table",
+    "Reps can run their own time report; managers get the whole team, coverage of the customer directory, win and resolve rates, and cases by manufacturer",
+    "Admin: add people and set their role without a code change, and drop a weekly manufacturer CSV like the customer list",
+    "New \u201cView only\u201d role for owners \u2014 the full picture, with nothing to accidentally change" ]},
+  { v:"1.14", date:"2026-07-11", title:"Drag-and-drop customer upload", items:[
+    "The customer list upload is now a drop zone — drag a CSV straight onto it, or tap to browse",
+    "It confirms the file by name before importing, with a Cancel option if you grab the wrong one" ]},
   { v:"1.13", date:"2026-07-11", title:"Customer directory & autocomplete", items:[
     "Admin can upload a weekly customer CSV (Manager view) that replaces the whole list",
     "Type a customer name OR account number in either field to autocomplete — fills name, account, phone, and full address",
@@ -303,17 +354,38 @@ const CHANGELOG = [
     "Live on Supabase" ]},
 ];
 const APP_VERSION = CHANGELOG[0].v;
-const CATEGORIES = ["Lost customer","Buying elsewhere","Product question","Needs training","Bad experience","Large job / project","Competitor issue","Pricing concern","New business opportunity","Other"];
+// Grouped for the dropdown. Anything under "Technical" routes the card to tech support.
+const CATEGORY_GROUPS = [
+  ["Sales", ["New business opportunity","Lost customer","Buying elsewhere","Competitor issue","Pricing concern","Large job / project","Bad experience"]],
+  ["Technical", ["Technical support","Product question","Needs training"]],
+  ["", ["Other"]],
+];
+const TECH_CATEGORIES = new Set(CATEGORY_GROUPS.find(g=>g[0]==="Technical")[1]);
+const CATEGORIES = CATEGORY_GROUPS.reduce((a,g)=>a.concat(g[1]),[]);
+// Salespeople get sales reasons, tech gets technical reasons. Everyone gets "Other".
+// Counter and managers see the lot, since they field both kinds.
+const categoryGroupsFor = p =>
+  p.type==="sales" ? CATEGORY_GROUPS.filter(g=>g[0]!=="Technical")
+  : p.type==="tech" ? CATEGORY_GROUPS.filter(g=>g[0]!=="Sales")
+  : CATEGORY_GROUPS;
+// Fallback list — used only until Kathleen drops a brand CSV on the Manager view.
+const MANUFACTURERS_FALLBACK = ["Amana","A.O. Smith","Bard","Bosch","Bradford White","Broan","Bryant","Carrier","Copeland","Daikin","Danfoss","Emerson","Fujitsu","Goodman","Grundfos","Heatcraft","Honeywell","Lennox","LG","Little Giant","Mitsubishi","Modine","Navien","Nordyne","Reznor","Rheem","Rinnai","Ruud","Sporlan","Taco","Tecumseh","Trane","White-Rodgers","York","Other"];
+const manufacturerList = () => (S.manufacturers && S.manufacturers.length) ? S.manufacturers.map(m=>m.name) : MANUFACTURERS_FALLBACK;
 const ACTIONS = ["Call","Visit","Quote follow-up","Other"];
+// Sensible starting time for the first touch, by how the contact happened.
+const FIRST_MINS = { "Call":15, "Visit":30, "Quote follow-up":15, "Other":15 };
 const TOUCH_MAP = { "Call":"Contacted","Visit":"Visited","Email":"Contacted","Quote":"Quote pending","Needs more info":"Needs more info","Other":"Contacted" };
+const TOUCH_MAP_TECH = { "Call":"Contacted","Site visit":"Visited","Email":"Contacted","Waiting on manufacturer":"Needs more info","Needs more info":"Needs more info","Other":"Contacted" };
 const TOUCH_TYPES = Object.keys(TOUCH_MAP);
+const touchMapFor = r => isTech(r) ? TOUCH_MAP_TECH : TOUCH_MAP;
 const URGENCY = ["Low","Medium","High"];
-const SALESPEOPLE = ["Juan","Stephen","Lex","Unassigned"];
-const assigneeOptions = current => { const base=SALESPEOPLE.slice(); if(current && !base.includes(current)) base.unshift(current); return opts(base,current); };
-const STATUS_LIST = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost","No action needed","Needs more info"];
+const assigneeOptions = current => { const base=salespeopleList(); if(current && !base.includes(current)) base.unshift(current); return opts(base,current); };
+const STATUS_LIST = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost","Resolved","Unresolved","No action needed","Needs more info"];
 const OPEN_STATUSES = ["New","Assigned","Contacted","Visited","Quote pending","Needs more info"];
+const isTech = r => (r && r.type)==="tech";
+const isFieldLevel = p => p && (p.type==="sales" || p.type==="tech");
 const isUpcomingVisit = r => r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) && r.next_follow_up && days(today(), r.next_follow_up) > 7;
-const STAGE_COLOR = { "New":"#0ea5e9","Assigned":"#6366f1","Contacted":"#f59e0b","Visited":"#14b8a6","Quote pending":"#8b5cf6","Won":"#10b981","Lost":"#f43f5e","No action needed":"#94a3b8","Needs more info":"#f97316" };
+const STAGE_COLOR = { "New":"#0ea5e9","Assigned":"#6366f1","Contacted":"#f59e0b","Visited":"#14b8a6","Quote pending":"#8b5cf6","Won":"#10b981","Lost":"#f43f5e","Resolved":"#10b981","Unresolved":"#f43f5e","No action needed":"#94a3b8","Needs more info":"#f97316" };
 const stageColor = s => STAGE_COLOR[s] || "#94a3b8";
 const STATUS_STYLE = {
   "New":"background:#e0f2fe;color:#075985;border-color:#bae6fd",
@@ -323,16 +395,35 @@ const STATUS_STYLE = {
   "Quote pending":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe",
   "Won":"background:#dcfce7;color:#166534;border-color:#bbf7d0",
   "Lost":"background:#ffe4e6;color:#9f1239;border-color:#fecdd3",
+  "Resolved":"background:#dcfce7;color:#166534;border-color:#bbf7d0",
+  "Unresolved":"background:#ffe4e6;color:#9f1239;border-color:#fecdd3",
   "No action needed":"background:#f1f5f9;color:#475569;border-color:#e2e8f0",
   "Needs more info":"background:#ffedd5;color:#9a3412;border-color:#fed7aa",
 };
-const PERSONAS = [
+const ROLE_LABEL = { employee:"Counter", sales:"Salesperson", tech:"Tech Support", manager:"Manager", admin:"Admin", viewer:"View only" };
+const ROLES = ["employee","sales","tech","manager","admin","viewer"];
+const readOnly = () => S.persona.type==="viewer";
+// A manager directs work ("Manager lead"); a rep hands it across ("Referral").
+const leadSourceOf = p => ["manager","admin"].includes(p.type) ? "Manager lead" : "Referral";
+// Used only until the people table loads (or if it's ever empty).
+const PERSONAS_FALLBACK = [
   { id:"daniel", name:"Daniel", role:"Counter", type:"employee" },
   { id:"juan", name:"Juan", role:"Salesperson", type:"sales" },
+  { id:"whitney", name:"Whitney", role:"Tech Support", type:"tech" },
   { id:"stephen", name:"Stephen", role:"Manager", type:"manager" },
   { id:"kathleen", name:"Kathleen", role:"Admin", type:"admin" },
 ];
-const THEME = { employee:{accent:"#C8102E"}, sales:{accent:"#2563eb"}, manager:{accent:"#0d9488"}, admin:{accent:"#7c3aed"} };
+function personaList(){
+  const src=(S.people||[]).filter(p=>p.active);
+  if(!src.length) return PERSONAS_FALLBACK;
+  return src.map(p=>({ id:p.id, name:p.name, role:ROLE_LABEL[p.role]||p.role, type:p.role }));
+}
+// Anyone who can own a card. Falls back to the old hard-coded list.
+function salespeopleList(){
+  const src=(S.people||[]).filter(p=>p.active && ["sales","tech","manager"].includes(p.role)).map(p=>p.name);
+  return (src.length?src:["Juan","Whitney","Stephen","Lex"]).concat("Unassigned");
+}
+const THEME = { employee:{accent:"#C8102E"}, sales:{accent:"#2563eb"}, tech:{accent:"#ea580c"}, manager:{accent:"#0d9488"}, admin:{accent:"#7c3aed"}, viewer:{accent:"#475569"} };
 const accentFor = t => (THEME[t]||THEME.employee).accent;
 const today = () => new Date().toISOString().slice(0,10);const days = (a,b) => Math.round((new Date(b)-new Date(a))/86400000);
 const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -359,7 +450,7 @@ const I = {
 };
 
 // ---- State ------------------------------------------------------------
-const S = { rows:null, updates:[], comments:[], persona:PERSONAS[0], tab:"submit", selectedId:null, conn:"connecting", filter:"Open", mineFilter:"Open", scope:"mine", subScope:"mine", sort:"newest", search:"", _focus:null, busy:false };
+const S = { rows:null, updates:[], comments:[], persona:PERSONAS_FALLBACK[0], tab:"submit", selectedId:null, conn:"connecting", filter:"Open", mineFilter:"Open", scope:"mine", subScope:"mine", sort:"newest", search:"", _focus:null, busy:false };
 
 function addCadence(dateStr, val, unit){
   const d=new Date(dateStr+"T00:00:00"); const n=Number(val)||1;
@@ -374,7 +465,7 @@ async function spawnRecurringCard(s, due){
     category:"Other", urgency:"Medium", suggested_action:"Visit",
     reason:s.note||("Recurring visit — every "+s.cadence_value+" "+s.cadence_unit),
     status:(s.assigned_to&&s.assigned_to!=="Unassigned")?"Assigned":"New", assigned_to:s.assigned_to||"Unassigned",
-    next_follow_up:due, source:"Recurring visit", recurring_id:s.id, first_touched_at:null, last_action_date:today() });
+    next_follow_up:due, source:"Recurring visit", recurring_id:s.id, type:s.type||"sales", first_touched_at:null, last_action_date:today() });
 }
 // Safety net only: if an active schedule is overdue AND has no open card, spawn one.
 // The normal rhythm is driven by "Complete visit" (completeVisit), not this.
@@ -413,17 +504,39 @@ async function completeVisit(r){
     toast(next&&sched&&sched.active?("Visit done — next one set for "+fmtDate(next)+"."):"Visit completed."); S.selectedId=null; S.busy=false; await load();
   }catch(e){ toast("Couldn't complete the visit. Try again.",false); S.busy=false; render(); }
 }
-async function load() {
+const safe = (pr, fallback) => pr.catch(()=>fallback);
+// Reference data (customers, brands, people) barely changes, so a routine action
+// only refetches the working set. Pass {full:true} after an import or a people edit.
+async function load(opts) {
+  const full = !!(opts && opts.full);
   try {
-    const [reqs, ups] = await Promise.all([
+    const core = Promise.all([
       sbGet("cp_requests?select=*&order=submitted_at.desc"),
       sbGet("cp_updates?select=*&order=created_at.asc"),
+      safe(sbGet("cp_comments?select=*&order=created_at.asc"), S.comments||[]),
+      safe(sbGet("cp_recurring?select=*&order=next_due.asc"), S.recurring||[]),
     ]);
-    S.rows = reqs; S.updates = ups; S.conn = "live";
-    try { S.comments = await sbGet("cp_comments?select=*&order=created_at.asc"); } catch(_) { S.comments = []; }
-    try { S.recurring = await sbGet("cp_recurring?select=*&order=next_due.asc"); } catch(_) { S.recurring = []; }
-    try { S.customers = await sbGetAll("cp_customers","&order=name.asc"); } catch(_) { S.customers = []; }
-    try { S.activity = await sbGet("cp_activity?select=*&order=created_at.desc&limit=500"); } catch(_) { S.activity = []; }
+    const ref = full ? Promise.all([
+      safe(sbGetAll("cp_customers","&order=name.asc"), S.customers||[]),
+      safe(sbGetAll("cp_manufacturers","&order=name.asc"), S.manufacturers||[]),
+      safe(sbGetAll("cp_people","&order=sort_order.asc,name.asc"), S.people||[]),
+      safe(sbGet("cp_ideas?select=*&order=created_at.desc"), S.ideas||[]),
+    ]) : null;
+    // Only the admin ever looks at the activity log — nobody else pays for it.
+    const act = S.persona.type==="admin"
+      ? safe(sbGet("cp_activity?select=*&order=created_at.desc&limit=500"), S.activity||[])
+      : null;
+
+    const [reqs, ups, comments, recurring] = await core;
+    S.rows = reqs; S.updates = ups; S.comments = comments; S.recurring = recurring; S.conn = "live";
+    if(ref){
+      const [customers, manufacturers, people, ideas] = await ref;
+      S.customers = customers; S.manufacturers = manufacturers; S.people = people; S.ideas = ideas;
+      // Fallback personas carry placeholder ids — re-point at the real record by name.
+      const pl = personaList();
+      S.persona = pl.find(x=>x.name===S.persona.name) || pl[0] || S.persona;
+    }
+    if(act) S.activity = await act;
     await spawnDueVisits();
     S.lastSync = new Date().toISOString();
   } catch (e) { S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false); }
@@ -474,6 +587,24 @@ function addrLines(r){
 async function replaceCustomers(list){
   await sbDelete("cp_customers","id=not.is.null");
   for(let i=0;i<list.length;i+=400){ await sbPost("cp_customers", list.slice(i,i+400)); }
+}
+function csvToManufacturers(text){
+  const rows=parseCSV(text); if(!rows.length) return [];
+  let start=0;
+  const first=(rows[0][0]||"").toLowerCase();
+  if(/manufacturer|brand|name|vendor|supplier/.test(first) && rows.length>1) start=1;
+  const seen=new Set(); const out=[];
+  for(let i=start;i<rows.length;i++){
+    const name=(rows[i][0]||"").trim();
+    if(!name) continue;
+    const key=name.toLowerCase(); if(seen.has(key)) continue;
+    seen.add(key); out.push({ name });
+  }
+  return out;
+}
+async function replaceManufacturers(list){
+  await sbDelete("cp_manufacturers","id=not.is.null");
+  for(let i=0;i<list.length;i+=400){ await sbPost("cp_manufacturers", list.slice(i,i+400)); }
 }
 function attachAutocomplete(inputId, targets){
   const input=document.getElementById(inputId), box=document.getElementById(inputId+"_ac");
@@ -589,24 +720,30 @@ const pill = st => `<span class="pill" style="${STATUS_STYLE[st]||STATUS_STYLE.N
 // Quick actions: one tap = status + today's date + auto follow-up date + a logged note.
 const bizDays = (from,n) => { const d=new Date(from); let a=0; while(a<n){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0&&w!==6)a++; } return d.toISOString().slice(0,10); };
 const QUICK = {
-  vm:{status:"Contacted",note:"Left a voicemail",follow:2},
-  email:{status:"Contacted",note:"Sent an email",follow:2},
-  text:{status:"Contacted",note:"Sent a text",follow:2},
-  stopped:{status:"Contacted",note:"Stopped by — customer unavailable",follow:2},
-  won:{status:"Won",note:"Marked won",follow:0},
-  lost:{status:"Lost",note:"Marked lost",follow:0},
-  close:{status:"No action needed",note:"Closed — no further action",follow:0},
+  vm:{status:"Contacted",note:"Left a voicemail",follow:2,mins:5},
+  email:{status:"Contacted",note:"Sent an email",follow:2,mins:5},
+  text:{status:"Contacted",note:"Sent a text",follow:2,mins:3},
+  stopped:{status:"Contacted",note:"Stopped by — customer unavailable",follow:2,mins:30},
+  won:{status:"Won",note:"Marked won",follow:0,mins:0},
+  lost:{status:"Lost",note:"Marked lost",follow:0,mins:0},
+  resolved:{status:"Resolved",note:"Marked resolved",follow:0,mins:0},
+  unresolved:{status:"Unresolved",note:"Marked unresolved",follow:0,mins:0},
+  close:{status:"No action needed",note:"Closed — no further action",follow:0,mins:0},
 };
 async function quick(r,key){
   const q=QUICK[key]; if(!r||!q) return;
-  if((key==="lost"||key==="close") && !confirm((key==="lost"?"Mark "+r.customer_name+" as Lost?":"Close "+r.customer_name+"?")+" This ends the lead.")) return;
+  const ending = key==="lost"||key==="close"||key==="unresolved";
+  if(ending && !confirm((key==="lost"?"Mark "+r.customer_name+" as Lost?":key==="unresolved"?"Mark "+r.customer_name+" unresolved?":"Close "+r.customer_name+"?")+" This ends the card.")) return;
+  const mEl=document.getElementById("q_mins");
+  const typed=mEl && mEl.value.trim()!=="" ? Number(mEl.value) : null;
+  const mins = typed!=null && !isNaN(typed) ? typed : q.mins;
   const patch={ status:q.status, first_touched_at:r.first_touched_at||today(), last_action_date:today() };
   patch.next_follow_up = q.follow>0 ? bizDays(today(),q.follow) : null;
   S.busy=true; render();
   try{
     await sbPatch("cp_requests","id=eq."+r.id,patch);
-    await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:q.status,note:q.note,author:S.persona.name});
-    logActivity("touch",q.note+" · "+(r.customer_name||"")); toast(q.note+" — saved."); S.busy=false; await load();
+    await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:q.status,note:q.note,author:S.persona.name,minutes:mins||null});
+    logActivity("touch",q.note+" · "+(r.customer_name||"")); toast(q.note+(mins?" · "+mins+" min":"")+" — saved."); S.busy=false; await load();
   }catch(e){ toast("Couldn't save. Try again.",false); S.busy=false; render(); }
 }
 async function assignSelf(r){
@@ -674,7 +811,8 @@ function threadCard(r){
   const list = commentsFor(r.id);
   const type=S.persona.type;
   const isMgr = type==="manager" || type==="admin";
-  const canPost = isMgr || type==="sales";
+  const viewOnly = readOnly();
+  const canPost = !readOnly() && (isMgr || type==="sales" || type==="tech");
   const status = noteStatus(r.id);
   const thread = list.length ? list.map(c=>{
     const mgr = isMgrNote(c);
@@ -690,13 +828,14 @@ function threadCard(r){
     <div class="tiny muted" style="margin-bottom:12px">Private between management and sales — the submitter never sees this.</div>
     ${status!=="none"?`<div style="margin-bottom:12px">${noteBadge(status, isMgr?'manager':'sales')}</div>`:""}
     ${thread}
+    ${viewOnly?`<div class="tiny muted" style="font-style:italic;margin-top:8px">You have view-only access.</div>`:""}
     ${canPost ? `<div style="margin-top:8px">
       <textarea id="c_body" style="min-height:64px" placeholder="${isMgr?'Add a suggestion or request for the salesperson…':'Reply to the manager…'}"></textarea>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <button class="btn" id="c_post" ${S.busy?'disabled':''}>${S.busy?'Posting…':(isMgr?'Post note':'Reply')}</button>
         ${(!isMgr && status==="needs")?`<button class="qbtn" data-markaddressed ${S.busy?'disabled':''}>✓ Mark as addressed</button>`:""}
       </div>
-    </div>` : `<div class="tiny muted" style="font-style:italic;margin-top:8px">Log an update as a touch.</div>`}
+    </div>` : (viewOnly?"":`<div class="tiny muted" style="font-style:italic;margin-top:8px">Log an update as a touch.</div>`)}
   </div>`;
 }
 async function postComment(){
@@ -734,23 +873,69 @@ function changelogModal(){
           <div class="cl-ver">v${c.v}${i===0?' <span class="cl-new">Latest</span>':''}${c.date?` <span class="tiny muted" style="font-weight:400">· ${fmtDate(c.date)}</span>`:''}</div>
           ${c.title?`<div class="cl-title">${esc(c.title)}</div>`:''}
           <ul class="cl-items">${c.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+          ${c.thanks&&c.thanks.length?`<div class="tiny" style="color:#16a34a;font-weight:600;margin-top:4px">\u{1F64C} ${esc(c.thanks.length===1?c.thanks[0]+" asked for this":c.thanks.slice(0,-1).join(", ")+" and "+c.thanks[c.thanks.length-1]+" asked for these")}</div>`:""}
         </div>`).join("")}
       </div>
-      <div class="modal-foot"><button class="btn" data-modal-close>Got it</button></div>
+      <div class="modal-foot" style="justify-content:space-between;align-items:center"><button class="linkish" data-idea style="font-size:12px">💡 Got an idea? Tell me</button><button class="btn" data-modal-close>Got it</button></div>
     </div>
   </div>`;
 }
+const IDEA_STATUS = ["New","Planned","Shipped","Not now"];
+const IDEA_STYLE = { "New":"background:#dbeafe;color:#1e40af;border-color:#bfdbfe", "Planned":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe", "Shipped":"background:#dcfce7;color:#166534;border-color:#bbf7d0", "Not now":"background:#f1f5f9;color:#64748b;border-color:#e2e8f0" };
+const TAB_LABEL = { submit:"Submit a Request", mine:"My Submissions", sales:"Sales Dashboard", reports:"Reports", manager:"Manager View", activity:"Activity" };
+// Grab the context for free, so nobody has to describe where they were.
+function ideaContext(){
+  const bits=[TAB_LABEL[S.tab]||S.tab];
+  if(S.tab==="reports" && S.reportTab) bits.push(RTABS.reduce((a,x)=>x[0]===S.reportTab?x[1]:a,"")+" report");
+  if(S.selectedId){ const r=(S.rows||[]).find(x=>String(x.id)===String(S.selectedId)); if(r&&r.customer_name) bits.push(r.customer_name); }
+  return bits.filter(Boolean).join(" \u00b7 ");
+}
+function ideaModal(){
+  const kind=S.ideaKind||"idea";
+  const mine=(S.ideas||[]).filter(i=>i.submitted_by===S.persona.name);
+  return `<div class="modal-overlay" data-modal-overlay>
+    <div class="modal">
+      <div class="modal-head">
+        <div><div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em">Make Pulse better</div>
+        <h2 style="margin:2px 0 0;font-size:19px">${kind==="bug"?"What's broken?":"What would help?"}</h2></div>
+        <button class="modal-x" data-modal-close title="Close">\u2715</button>
+      </div>
+      <div class="modal-body">
+        <div class="modeseg" style="margin:8px 0 12px">
+          <button data-ideakind="idea" class="${kind==="idea"?"active":""}">\u{1F4A1} An idea</button>
+          <button data-ideakind="bug" class="${kind==="bug"?"active":""}">\u{1F41B} Something's broken</button>
+        </div>
+        <textarea id="idea_body" style="min-height:110px" placeholder="${kind==="bug"?"What happened, and what did you expect instead? Rough is fine.":"Anything \u2014 a annoyance, a shortcut you wish existed, a thing that takes too many taps. Small ideas are the best ones."}">${esc(S.ideaDraft||"")}</textarea>
+        <div class="tiny muted" style="margin-top:8px">Sent as <b>${esc(S.persona.name)}</b> from <b>${esc(ideaContext())}</b> \u00b7 v${APP_VERSION}. No need to explain where you were.</div>
+        ${mine.length?`<div style="margin-top:18px;border-top:1px solid #f1f5f9;padding-top:14px">
+          <div class="tiny" style="font-weight:700;color:#334155;margin-bottom:8px">What you've sent so far</div>
+          ${mine.slice(0,6).map(i=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0">
+            <span class="pill" style="${IDEA_STYLE[i.status]||''};flex:none">${esc(i.status)}</span>
+            <span style="font-size:13px;color:#475569;min-width:0">${esc(i.body.length>90?i.body.slice(0,90)+"\u2026":i.body)}</span>
+          </div>`).join("")}
+        </div>`:""}
+      </div>
+      <div class="modal-foot" style="gap:8px">
+        <button class="btn-ghost" data-modal-close>Cancel</button>
+        <button class="btn" id="idea_send" ${S.busy?'disabled':''}>${S.busy?'Sending\u2026':'Send it'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function openIdea(){ if(S.showChangelog){ try{ localStorage.setItem("cp_seen_version", APP_VERSION); }catch(e){} } S.showIdea=true; S.showChangelog=false; render(); }
 function openChangelog(){ S.showChangelog=true; render(); }
+function closeIdea(){ S.showIdea=false; S.ideaDraft=null; render(); }
 function closeChangelog(){ S.showChangelog=false; try{ localStorage.setItem('cp_seen_version', APP_VERSION); }catch(e){} render(); }
 function render() {
   const p = S.persona;
   const accent = accentFor(p.type);
   document.documentElement.style.setProperty('--accent', accent);
   const tabs = [
-    { id:"submit", label:"Submit a Request", icon:I.send, show:true },
-    { id:"mine", label:"My Submissions", icon:I.clip, show:true },
+    { id:"submit", label:"Submit a Request", icon:I.send, show:p.type!=="viewer" },
+    { id:"mine", label:"My Submissions", icon:I.clip, show:p.type!=="viewer" },
     { id:"sales", label:"Sales Dashboard", icon:I.dash, show:p.type!=="employee" },
-    { id:"manager", label:"Manager View", icon:I.chart, show:p.type==="manager"||p.type==="admin" },
+    { id:"reports", label:"Reports", icon:I.trend, show:p.type!=="employee" },
+    { id:"manager", label:"Manager View", icon:I.chart, show:["manager","admin","viewer"].includes(p.type) },
     { id:"activity", label:"Activity", icon:I.activity, show:p.type==="admin" },
   ].filter(t=>t.show);
 
@@ -764,6 +949,7 @@ function render() {
   else if (S.tab==="submit") body = viewSubmit();
   else if (S.tab==="mine") body = S.selectedId ? viewEmployeeDetail() : viewMine();
   else if (S.tab==="sales") body = S.selectedId ? viewSalesDetail() : viewSales();
+  else if (S.tab==="reports") body = viewReports();
   else if (S.tab==="manager") body = viewManager();
   else if (S.tab==="activity") body = viewActivity();
 
@@ -774,12 +960,12 @@ function render() {
         <div class="brand">
           <div class="logo">${I.activity}</div>
           <div><div class="title">Customer Pulse</div>
-          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button></div></div>
+          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button><button class="verpill" data-idea title="Got an idea, or found something broken?" style="margin-left:6px">💡 Idea</button></div></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="view-as">Viewing as</span>
           <div class="personas">
-            ${PERSONAS.map(x=>{const on=x.id===p.id;return `<button data-persona="${x.id}" class="${on?"active":""}"${on?` style="background:${accentFor(x.type)};color:#fff"`:""}>${x.name}</button>`;}).join("")}
+            ${personaList().map(x=>{const on=x.id===p.id;return `<button data-persona="${x.id}" class="${on?"active":""}"${on?` style="background:${accentFor(x.type)};color:#fff"`:""}>${x.name}</button>`;}).join("")}
           </div>
         </div>
       </div>
@@ -788,13 +974,19 @@ function render() {
       </div></div>
     </header>
     <main><div class="wrap">${body}</div></main>
-    ${S.showChangelog?changelogModal():""}`;
+    ${S.showChangelog?changelogModal():""}
+    ${S.showIdea?ideaModal():""}`;
   bind();
   if(S._focus){ const el=document.getElementById(S._focus); if(el){ el.focus(); try{ const L=el.value.length; el.setSelectionRange(L,L); }catch(e){} } S._focus=null; }
 }
 
 // ---- Views ------------------------------------------------------------
 function opts(arr, sel){ return arr.map(o=>`<option ${o===sel?"selected":""}>${esc(o)}</option>`).join(""); }
+function groupedOpts(groups, sel){
+  return groups.map(([label,items])=> label
+    ? `<optgroup label="${esc(label)}">${opts(items,sel)}</optgroup>`
+    : opts(items,sel)).join("");
+}
 // Sales can't pick "New" (it's the counter's opening state). If a record is still New,
 // The detailed touch form only advances in-progress statuses. Won/Lost/Close
 // happen via quick actions, so they're not selectable here — but if a lead is
@@ -807,8 +999,40 @@ function statusOptions(current){
 
 function viewSubmit() {
   const emp = S.persona.type==="employee";
-  const FIELD_STATUSES = ["Contacted","Visited","Quote pending","Needs more info","Won"];
+  const tech = S.persona.type==="tech";
+  const canLogTech = ["employee","manager","admin"].includes(S.persona.type);
+  const canAssign = ["manager","admin"].includes(S.persona.type);
   const mode = emp ? "counter" : (S.submitMode||"field");
+  const isLead = mode==="lead";
+  // A manager directs anyone. A salesperson can only refer across to tech, and
+  // tech can only refer across to sales — handing work sideways stays a manager's call.
+  const leadTargetRoles = S.persona.type==="sales" ? ["tech"] : S.persona.type==="tech" ? ["sales"] : ["sales","tech","manager"];
+  const leadAssignees = () => {
+    const src=(S.people||[]).filter(x=>x.active && leadTargetRoles.includes(x.role)).map(x=>x.name);
+    if(src.length) return src;
+    // No people table yet — fall back to the old list, minus yourself.
+    return salespeopleList().filter(x=>x!=="Unassigned" && x!==S.persona.name);
+  };
+  // Referring across means the reasons invert: Juan picks technical ones, Whitney picks sales ones.
+  const leadGroups = () =>
+    S.persona.type==="sales" ? CATEGORY_GROUPS.filter(g=>g[0]!=="Sales")
+    : S.persona.type==="tech" ? CATEGORY_GROUPS.filter(g=>g[0]!=="Technical")
+    : CATEGORY_GROUPS;
+  const FIELD_STATUSES = ["Contacted","Visited","Quote pending","Needs more info",tech?"Resolved":"Won"];
+
+  const productBlock = (collapsed) => {
+    const inner = `
+      <div class="grid2">
+        <label class="f"><span class="lbl">Manufacturer</span><select id="s_mfr"><option value="">—</option>${opts(manufacturerList())}</select></label>
+        <label class="f"><span class="lbl">Model</span><input id="s_model" placeholder="Model number"/></label>
+        <label class="f"><span class="lbl">Serial</span><input id="s_serial" placeholder="Serial number"/></label>
+        <label class="f"><span class="lbl">Case # <span style="color:#94a3b8;font-weight:400">(manufacturer's)</span></span><input id="s_caseno" placeholder="RMA / case number"/></label>
+      </div>
+      <label class="f" style="margin-top:12px"><span class="lbl">The issue ${collapsed?`<span style="color:#94a3b8;font-weight:400">(optional)</span>`:`<span class="req">*</span>`}</span><textarea id="s_issue" style="min-height:70px" placeholder="What's failing, error codes, what's been tried."></textarea></label>`;
+    return collapsed
+      ? `<details style="margin-top:14px"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:#475569">Product details <span style="font-weight:400;color:#94a3b8">(optional — for a technical reason)</span></summary><div style="margin-top:12px">${inner}</div></details>`
+      : `<div class="fsection" style="border-left-color:#ea580c;background:#fff8f4"><div class="fsection-h"><span class="fsdot" style="background:#ea580c"></span>Product &amp; issue</div>${inner}</div>`;
+  };
 
   const basicCard = (field) => `
     <div class="card">
@@ -825,16 +1049,22 @@ function viewSubmit() {
         <label class="f"><span class="lbl">Zip</span><input id="s_zip"/></label>
         <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="s_branch">${opts(BRANCHES)}</select></label>
         <label class="f"><span class="lbl">${field?"Type of contact":"Suggested action"} <span class="req">*</span></span><select id="s_action">${opts(ACTIONS, field?"Visit":undefined)}</select></label>
-        <label class="f"><span class="lbl">Reason / category <span class="req">*</span></span><select id="s_category">${opts(CATEGORIES)}</select></label>
+        <label class="f"><span class="lbl">Reason / category <span class="req">*</span></span><select id="s_category">${groupedOpts(isLead?leadGroups():categoryGroupsFor(S.persona))}</select></label>
         <label class="f"><span class="lbl">Urgency <span class="req">*</span></span><select id="s_urgency">${opts(URGENCY,"Medium")}</select></label>
+        ${field&&canAssign?`<label class="f"><span class="lbl">Assign to <span style="color:#94a3b8;font-weight:400">— who follows up</span></span><select id="s_owner">${assigneeOptions(S.persona.name)}</select></label>`:""}
+        ${isLead?`<label class="f"><span class="lbl">Who should chase this? <span class="req">*</span></span><select id="s_owner"><option value="">Choose someone…</option>${opts(leadAssignees())}</select>${leadAssignees().length?"":`<div class="tiny" style="color:#dc2626;margin-top:4px">Nobody to refer to yet — add someone on the Manager view.</div>`}</label>
+        <label class="f"><span class="lbl">Chase it by <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="s_next"/>${dateChips("s_next")}</label>`:""}
         ${field?`<label class="f"><span class="lbl">Current status <span class="req">*</span></span><select id="s_status">${opts(FIELD_STATUSES,"Visited")}</select></label>
-        <label class="f"><span class="lbl">Next follow-up <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="s_next"/>${dateChips("s_next")}</label>`:""}
+        <label class="f"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="s_mins" min="0" value="30"/>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${[15,30,45,60,90].map(m=>`<button type="button" class="datechip" data-sminset="${m}">${m}m</button>`).join("")}</div></label>
+        <label class="f"${canAssign?"":` style="grid-column:1/-1"`}><span class="lbl">Next follow-up <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="s_next"/>${dateChips("s_next")}</label>`:""}
       </div>
-      <label class="f" style="margin-top:16px"><span class="lbl">${field?"What happened on the call?":"What's going on?"} <span class="req">*</span></span><textarea id="s_reason" placeholder="${field?"What you discussed, what they need, how it went.":"Tell sales what you heard or saw. Plain language is fine."}"></textarea></label>
+      <label class="f" style="margin-top:16px"><span class="lbl">${isLead?"What should they look into?":field?(tech?"What happened on this contact?":"What happened on the call?"):"What's going on?"} <span class="req">*</span></span><textarea id="s_reason" placeholder="${isLead?"What you heard, and what you want them to find out. No call gets logged — this is work for someone else.":field?"What you discussed, what they need, how it went.":"Tell sales what you heard or saw. Plain language is fine."}"></textarea></label>
+      ${tech&&field?productBlock(false):((isLead?S.persona.type!=="tech":canLogTech)?productBlock(true):"")}
       ${field?`<label class="f" style="margin-top:12px"><span class="lbl">Follow-up topic <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_topic" placeholder="The specific thing to raise next time"/></label>`:""}
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
-        <span class="tiny muted">${field?`Logging as <b style="color:#475569">${esc(S.persona.name)}</b> — assigned to you`:`Submitting as <b style="color:#475569">${esc(S.persona.name)}</b>`}</span>
-        <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="s_submit">${I.send} ${S.busy?(field?"Logging…":"Submitting…"):(field?"Log call":"Submit request")}</button></div>
+        <span class="tiny muted">${isLead?`Raised by <b style="color:#475569">${esc(S.persona.name)}</b> — no call logged, no time recorded`:field?`Logging as <b style="color:#475569">${esc(S.persona.name)}</b> — assigned to you`:`Submitting as <b style="color:#475569">${esc(S.persona.name)}</b>`}</span>
+        <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="s_submit">${I.send} ${S.busy?(isLead?"Sending…":field?"Logging…":"Submitting…"):(isLead?(canAssign?"Raise lead":"Refer it"):field?"Log call":"Submit request")}</button></div>
       </div>
     </div>`;
 
@@ -892,14 +1122,22 @@ function viewSubmit() {
     </div>`;
 
   const titles = {
-    counter:["Customer Sales Call Request","You see things sales never hears. If someone should get a call or a visit, send it here — it gets tracked, and you can watch what happens."],
-    field:["Log a field call","Just called or visited a customer? Capture it here — it runs through the same pipeline, assigned to you and ready to follow up."],
+    counter:["Customer Requests","You see things the rest of us never hear. If a customer needs a call, a visit, or technical help, send it here — it gets tracked, and you can watch what happens."],
+    field: tech
+      ? ["Log a technical support contact","A visit, call, or email on a technical issue. It runs through the same pipeline — assigned to you and ready to follow up."]
+      : ["Log a field call","Just called or visited a customer? Capture it here — it runs through the same pipeline, assigned to you and ready to follow up."],
+    lead: canAssign
+      ? ["Log a lead","Heard something worth chasing? Hand it to someone. Nothing gets logged against your name and no time is recorded \u2014 it lands on their board as new work."]
+      : S.persona.type==="tech"
+        ? ["Refer it to sales","Heard a sales opening on a tech call? Send it over rather than logging a sales call you didn't make."]
+        : ["Refer it to tech support","Spotted something technical you can't take on? Send it to the tech team rather than logging a tech call in your name."],
     recurring:["Schedule a recurring visit","Set a customer to be visited on a repeating cadence. The next visit is scheduled from the day the last one is completed."],
     project:["Set up a project to monitor","Create a long-running project card — the assigned rep visits and logs touches against it over the life of the job."]
   };
   const [title,sub]=titles[mode];
   const selector = emp ? "" : `<div class="modeseg">
-    <button data-submode="field" class="${mode==='field'?'active':''}">Field call</button>
+    <button data-submode="field" class="${mode==='field'?'active':''}">${tech?"Tech call":"Field call"}</button>
+    <button data-submode="lead" class="${mode==='lead'?'active':''}">${canAssign?"Lead":"Refer"}</button>
     <button data-submode="recurring" class="${mode==='recurring'?'active':''}">Recurring visit</button>
     <button data-submode="project" class="${mode==='project'?'active':''}">Project</button>
   </div>`;
@@ -939,10 +1177,13 @@ function listItem(r, sales) {
   </button>`;
 }
 
+const techBadge = r => isTech(r) ? `<span style="font-size:11px;font-weight:700;color:#9a3412;background:#ffedd5;padding:1px 8px;border-radius:999px">Tech</span>` : "";
 const sourceBadge = r =>
   r.source==='Field call' ? `<span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:1px 8px;border-radius:999px">Field call</span>`
   : r.source==='Project' ? `<span style="font-size:11px;font-weight:600;color:#6d28d9;background:#ede9fe;padding:1px 8px;border-radius:999px">Project</span>`
   : r.source==='Recurring visit' ? `<span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px">Recurring visit</span>`
+  : r.source==='Manager lead' ? `<span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px">Manager lead</span>`
+  : r.source==='Referral' ? `<span style="font-size:11px;font-weight:600;color:#9a3412;background:#ffedd5;padding:1px 8px;border-radius:999px">Referral</span>`
   : `<span style="font-size:11px;font-weight:600;color:#b91c1c;background:#fee2e2;padding:1px 8px;border-radius:999px">Sales call request</span>`;
 function subCard(r){
   const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
@@ -968,6 +1209,7 @@ function salesCard(r){
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:5px">
       ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
+      ${techBadge(r)}
       ${sourceBadge(r)}
       ${isUpcomingVisit(r)?`<span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:1px 8px;border-radius:999px">Scheduled · ${fmtDate(r.next_follow_up)}</span>`:""}
       ${hasNote?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
@@ -982,7 +1224,7 @@ function salesCard(r){
 
 function viewNotes(){
   const nf=S.noteFilter||"needs";
-  const nscope=S.noteScope || (S.persona.type==="sales"?"mine":"everyone");
+  const nscope=S.noteScope || (isFieldLevel(S.persona)?"mine":"everyone");
   let data=cardsWithNotes();
   if(nscope==="mine") data=data.filter(x=>x.r.assigned_to===S.persona.name);
   if(nf==="needs") data=data.filter(x=>x.status==="needs");
@@ -1100,9 +1342,13 @@ function viewSales() {
     list = list.filter(inScope);
   }
   if(S.search) list = list.filter(r=>matchSearch(r,S.search));
+  const tf=S.typeFilter||"all";
+  if(tf==="sales") list=list.filter(r=>!isTech(r));
+  else if(tf==="tech") list=list.filter(r=>isTech(r));
   list = sortList(list);
   list = [...list.filter(r=>!isUpcomingVisit(r)), ...list.filter(r=>isUpcomingVisit(r))];
   const fs = ["Open","New","All","Closed","Won","Lost"];
+  const typeSeg=[["all","All work"],["sales","Sales"],["tech","Tech"]].map(([k,l])=>`<button data-typefilter="${k}" class="${tf===k?'active':''}">${l}</button>`).join("");
   const scopes = [["mine","Mine"],["unassigned","Unassigned"],["everyone","Everyone"]];
   const emTitle = S.scope==='mine'?"You're all caught up":S.scope==='unassigned'?"No unclaimed leads":"Clean board";
   const emSub = S.scope==='mine'?"Nothing assigned to you in this filter. Enjoy the quiet — or check Unassigned for something to grab."
@@ -1114,6 +1360,7 @@ function viewSales() {
       ${viewToggle}
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="filters">${typeSeg}</div>
       <div class="filters">${scopes.map(([v,l])=>`<button data-scope="${v}" class="${S.scope===v?'active':''}">${l}</button>`).join("")}</div>
       <div class="filters">${fs.map(x=>`<button data-filter="${x}" class="${x===f?'active':''}">${x}</button>`).join("")}</div>
       ${sortSelect()}
@@ -1148,7 +1395,7 @@ function viewCalendar(){
   const person=S.calPerson||"Everyone";
   const passes=r=>{ const open=OPEN_STATUSES.includes(r.status); if(st==="open"&&!open)return false; if(st==="completed"&&open)return false; if(person!=="Everyone"&&r.assigned_to!==person)return false; return true; };
   const statusSeg=[["open","Open"],["completed","Completed"],["all","All"]].map(([k,l])=>`<button data-calstatus="${k}" class="${st===k?'active':''}">${l}</button>`).join("");
-  const people=["Everyone",...SALESPEOPLE.filter(p=>p!=="Unassigned"),"Unassigned"];
+  const people=["Everyone",...salespeopleList().filter(p=>p!=="Unassigned"),"Unassigned"];
   const personSel=`<select class="sortsel" data-calperson>${people.map(p=>`<option ${p===person?'selected':''}>${esc(p)}</option>`).join("")}</select>`;
   const viewSeg=`<div class="modeseg"><button data-calview="month" class="${view==='month'?'active':''}">Month</button><button data-calview="day" class="${view==='day'?'active':''}">Day</button></div>`;
   const controls=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${viewSeg}<div class="modeseg">${statusSeg}</div>${personSel}</div>`;
@@ -1269,7 +1516,7 @@ function viewSalesDetail() {
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 12px;background:#f8fafc;border:1px solid #eef2f6;border-radius:10px">
           <span class="tiny" style="font-weight:600;color:#475569">Owner</span>
-          <select data-assign-lead class="sortsel" ${S.busy?'disabled':''}>${assigneeOptions(r.assigned_to)}</select>
+          <select data-assign-lead class="sortsel" ${(S.busy||readOnly())?'disabled':''}>${assigneeOptions(r.assigned_to)}</select>
           <span class="tiny muted">— this lead's assigned rep</span>
         </div>
         <div class="grid2" style="gap:8px;margin-bottom:16px">
@@ -1278,25 +1525,43 @@ function viewSalesDetail() {
           ${info("Submitted by",r.submitted_by+" · "+fmtDate(r.submitted_at))}${info("Age",days(r.submitted_at,today())+" days")}
         </div>
         <div class="softbox" style="margin-bottom:16px">
-          <div class="tiny" style="color:#64748b;margin-bottom:4px">What the counter flagged</div>
+          <div class="tiny" style="color:#64748b;margin-bottom:4px">${r.source==="Manager lead"||r.source==="Referral"?`Why ${esc(r.submitted_by)} raised this`:"What the counter flagged"}</div>
           <div style="font-size:14px;color:#334155">${esc(r.reason)}</div>
         </div>
+        ${isTech(r)?`<div class="fsection" style="border-left-color:#ea580c;background:#fff8f4;margin-bottom:16px">
+          <div class="fsection-h"><span class="fsdot" style="background:#ea580c"></span>Product &amp; issue</div>
+          ${(r.manufacturer||r.model||r.serial||r.case_number)?`<div class="tbits" style="margin-top:0;margin-bottom:${r.issue?'10px':'0'}">
+            ${r.manufacturer?`<span class="tbit"><b>${esc(r.manufacturer)}</b></span>`:""}
+            ${r.model?`<span class="tbit">Model ${esc(r.model)}</span>`:""}
+            ${r.serial?`<span class="tbit">S/N ${esc(r.serial)}</span>`:""}
+            ${r.case_number?`<span class="tbit">Case ${esc(r.case_number)}</span>`:""}
+          </div>`:""}
+          ${r.issue?`<div style="font-size:14px;color:#334155">${esc(r.issue)}</div>`:`<div class="tiny muted" style="font-style:italic">No product details captured yet.</div>`}
+        </div>`:""}
         <div class="tiny" style="font-weight:600;color:#64748b;margin-bottom:8px">Touch history <span class="muted" style="font-weight:400">— every logged interaction, newest first (internal)</span></div>
         ${ups.length===0?'<div class="tiny muted" style="font-style:italic">No touches yet. Log the first one on the right.</div>':`<div class="stack tscroll">${[...ups].reverse().map(touchTimeline).join("")}</div>`}
       </div>
     </div>
     <div>
-      ${r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) ? `<button class="btn block" data-complete-visit style="margin-bottom:16px;background:#0d9488" ${S.busy?'disabled':''}>✓ Complete visit &amp; schedule the next</button>` : ""}
+      ${readOnly() ? `<div class="card" style="background:#f8fafc;border-color:#e2e8f0"><div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:4px">View only</div><div class="tiny muted">You can read everything here \u2014 the record, the touch history, and the manager thread. Logging touches and changing the card is left to the sales and tech team.</div></div>` : `      ${r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) ? `<button class="btn block" data-complete-visit style="margin-bottom:16px;background:#0d9488" ${S.busy?'disabled':''}>✓ Complete visit &amp; schedule the next</button>` : ""}
       <div class="card" style="margin-bottom:16px;background:#f0f6ff;border-color:#dbeafe">
         <div style="font-size:13px;font-weight:600;color:#1e40af;margin-bottom:10px">Quick actions <span class="tiny muted" style="font-weight:400">— one tap, stamps today &amp; sets the next follow-up</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:#fff;border:1px solid #dbeafe;border-radius:9px">
+          <span class="tiny" style="font-weight:600;color:#475569;white-space:nowrap">Minutes</span>
+          <input type="number" id="q_mins" min="0" placeholder="auto" style="max-width:80px;padding:5px 8px;font-size:13px"/>
+          <span class="tiny muted">leave blank and each action uses its usual time</span>
+        </div>
         <div class="qrow">
           ${r.assigned_to==='Unassigned' ? `<button class="qbtn assign" data-assign="1" ${S.busy?'disabled':''}>I've got this</button>` : ""}
           <button class="qbtn" data-quick="vm" ${S.busy?'disabled':''}>Left voicemail</button>
           <button class="qbtn" data-quick="email" ${S.busy?'disabled':''}>Sent email</button>
           <button class="qbtn" data-quick="text" ${S.busy?'disabled':''}>Sent text</button>
           <button class="qbtn" data-quick="stopped" ${S.busy?'disabled':''}>Stopped by / unavailable</button>
-          <button class="qbtn won" data-quick="won" ${S.busy?'disabled':''}>Won</button>
-          <button class="qbtn lost" data-quick="lost" ${S.busy?'disabled':''}>Lost</button>
+          ${isTech(r)
+            ? `<button class="qbtn won" data-quick="resolved" ${S.busy?'disabled':''}>Resolved</button>
+               <button class="qbtn lost" data-quick="unresolved" ${S.busy?'disabled':''}>Unresolved</button>`
+            : `<button class="qbtn won" data-quick="won" ${S.busy?'disabled':''}>Won</button>
+               <button class="qbtn lost" data-quick="lost" ${S.busy?'disabled':''}>Lost</button>`}
           <button class="qbtn" data-quick="close" ${S.busy?'disabled':''}>Close</button>
         </div>
       </div>
@@ -1306,9 +1571,13 @@ function viewSalesDetail() {
         <div class="fsection fs-touch">
           <div class="fsection-h"><span class="fsdot" style="background:#2563eb"></span>The touch</div>
           <div class="grid2">
-            <label class="f"><span class="lbl">Touch type <span style="color:#94a3b8;font-weight:400">— sets the stage</span></span><select id="u_type">${opts(TOUCH_TYPES,"Call")}</select></label>
+            <label class="f"><span class="lbl">Touch type <span style="color:#94a3b8;font-weight:400">— sets the stage</span></span><select id="u_type">${opts(Object.keys(touchMapFor(r)),"Call")}</select></label>
             <label class="f"><span class="lbl">Next follow-up</span><input type="date" id="u_next" value="${esc(r.next_follow_up||'')}"/>${dateChips("u_next")}</label>
           </div>
+          <label class="f" style="margin-top:12px"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span>
+            <input type="number" id="u_mins" min="0" placeholder="e.g. 30"/>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${[15,30,45,60,90].map(m=>`<button type="button" class="datechip" data-minset="${m}">${m}m</button>`).join("")}</div>
+          </label>
         </div>
         <div class="fsection fs-covered">
           <div class="fsection-h"><span class="fsdot" style="background:#0d9488"></span>What was covered</div>
@@ -1332,7 +1601,7 @@ function viewSalesDetail() {
         </div>
         <button class="btn block" id="u_save" style="margin-top:16px" ${S.busy?'disabled':''}>${S.busy?'Logging…':'Log touch'}</button>
       </div>
-    </div>
+    </div>`}
   </div>
   ${historyCard(r)}
   ${threadCard(r)}
@@ -1341,12 +1610,31 @@ function viewSalesDetail() {
 }
 
 function info(k,v){ return `<div class="info"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`; }
+// The time on a touch feeds the reports, so whoever logged it can correct it.
+// The note and status stay as they were — that's the historical record.
+function minsChip(u){
+  const canEdit = !readOnly() && (u.author===S.persona.name || S.persona.type==="admin");
+  if(S.editTouch===u.id){
+    return `<span class="tbit" style="background:#fff;border-color:#93c5fd;padding:3px 7px;display:inline-flex;align-items:center;gap:6px">
+      <input type="number" min="0" id="et_mins" value="${esc(u.minutes||"")}" placeholder="min" style="width:62px;padding:2px 6px;font-size:12px"/>
+      <button class="linkish" data-savemins="${u.id}" style="font-size:11px" ${S.busy?'disabled':''}>${S.busy?'Saving…':'Save'}</button>
+      <button class="linkish" data-cancelmins="1" style="font-size:11px;color:#94a3b8">Cancel</button>
+    </span>`;
+  }
+  if(u.minutes) return `<span class="tbit" style="background:#eff6ff;border-color:#dbeafe;color:#1e40af${canEdit?';cursor:pointer':''}" ${canEdit?`data-editmins="${u.id}" title="Tap to correct the time"`:''}>⏱ ${esc(u.minutes)} min</span>`;
+  if(canEdit) return `<span class="tbit" style="cursor:pointer;color:#94a3b8;border-style:dashed" data-editmins="${u.id}" title="Add the time this took">⏱ add time</span>`;
+  return "";
+}
+const delChip = u => (!readOnly() && S.persona.type==="admin")
+  ? `<span class="tbit" style="cursor:pointer;color:#dc2626;border-color:#fecaca" data-deltouch="${u.id}" title="Remove this touch entirely">Remove</span>` : "";
 function touchTimeline(u){
   const bits=[];
+  const mc=minsChip(u); if(mc) bits.push(mc);
   if(u.products_discussed) bits.push(`<span class="tbit">Products: ${esc(u.products_discussed)}</span>`);
   if(u.quote_number||Number(u.quoted_value)) bits.push(`<span class="tbit">Quote ${esc(u.quote_number||'')}${Number(u.quoted_value)?' · $'+Number(u.quoted_value).toLocaleString():''}</span>`);
   if(u.order_number||Number(u.ordered_value)) bits.push(`<span class="tbit">Order ${esc(u.order_number||'')}${Number(u.ordered_value)?' · $'+Number(u.ordered_value).toLocaleString():''}</span>`);
   if(u.follow_up_topic) bits.push(`<span class="tbit">Covered: ${esc(u.follow_up_topic)}</span>`);
+  const dc=delChip(u); if(dc) bits.push(dc);
   if(u.contact_type){
     return `<div class="touch">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1358,7 +1646,7 @@ function touchTimeline(u){
       ${u.public_summary?`<div class="tiny" style="margin-top:6px;color:#64748b"><b>Shared with customer:</b> ${esc(u.public_summary)}</div>`:""}
     </div>`;
   }
-  return `<div class="note"><div class="tiny muted" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(fmtDateTime(u.created_at,u.update_date))} ${u.status?pill(u.status):""}${u.author?'<span>· '+esc(u.author)+'</span>':''}</div><div style="font-size:13px;color:#475569;margin-top:2px">${esc(u.note||'')}</div></div>`;
+  return `<div class="note"><div class="tiny muted" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(fmtDateTime(u.created_at,u.update_date))} ${u.status?pill(u.status):""}${u.author?'<span>· '+esc(u.author)+'</span>':''}</div><div style="font-size:13px;color:#475569;margin-top:2px">${esc(u.note||'')}</div>${bits.length?`<div class="tbits">${bits.join("")}</div>`:""}</div>`;
 }
 function empty(icon,t,b){ return `<div class="empty">${icon}<div style="font-weight:600;color:#334155;margin-top:12px">${t}</div><div class="tiny muted" style="margin-top:4px">${b}</div></div>`; }
 
@@ -1371,8 +1659,8 @@ function viewActivity(){
   const byPerson={};
   recent.forEach(a=>{ const k=a.actor||"?"; byPerson[k]=byPerson[k]||{s:0,a:0}; if(a.event==="session") byPerson[k].s++; else byPerson[k].a++; });
   const people=Object.entries(byPerson).sort((x,y)=>(y[1].s+y[1].a)-(x[1].s+x[1].a));
-  const evLabel={session:"Session",submit:"Submission",touch:"Touch",assign:"Assignment",complete_visit:"Visit completed",note:"Manager note",customer_import:"Customer upload"};
-  const evColor={session:"#94a3b8",submit:"#2563eb",touch:"#0d9488",assign:"#7c3aed",complete_visit:"#16a34a",note:"#9f1239",customer_import:"#7c3aed"};
+  const evLabel={session:"Session",submit:"Submission",touch:"Touch",assign:"Assignment",complete_visit:"Visit completed",note:"Manager note",customer_import:"Customer upload",mfr_import:"Brand upload",people:"People change",touch_edit:"Touch corrected"};
+  const evColor={session:"#94a3b8",submit:"#2563eb",touch:"#0d9488",assign:"#7c3aed",complete_visit:"#16a34a",note:"#9f1239",customer_import:"#7c3aed",mfr_import:"#ea580c",people:"#0284c7",touch_edit:"#f59e0b"};
   const statBox=(k,v,sub)=>`<div class="card stat"><div class="k">${k}</div><div class="v">${esc(v)}</div><div class="s">${esc(sub)}</div></div>`;
   return `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:12px">
@@ -1398,6 +1686,415 @@ function viewActivity(){
         <div class="tiny muted">${esc(evLabel[a.event]||a.event)} · ${esc(fmtDateTime(a.created_at))}</div></div>
       </div>`).join("")}</div>` : `<p class="tiny muted">Nothing logged yet — activity appears here as the team uses the app.</p>`}
     </div>
+  </div>`;
+}
+const fmtHrs = m => (m/60).toFixed(1)+"h";
+function isoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+// One pass over the touches — every report view reads from this.
+function timeData(){
+  const mgr = ["manager","admin","viewer"].includes(S.persona.type);
+  const end=S.trEnd||today();
+  const start=S.trStart||(()=>{ const d=new Date(); d.setDate(d.getDate()-6); return isoLocal(d); })();
+  const who = mgr ? (S.trWho||"Everyone") : S.persona.name;
+  const inRange=u=>{ const d=String(u.update_date||u.created_at||"").slice(0,10); return d>=start && d<=end; };
+  let logged=S.updates.filter(u=>Number(u.minutes)>0 && inRange(u));
+  if(who!=="Everyone") logged=logged.filter(u=>u.author===who);
+  const byId={}; S.rows.forEach(r=>byId[r.id]=r);
+  const people={}, byCust={}, byDay={}, byType={sales:0,tech:0};
+  logged.forEach(u=>{
+    const a=u.author||"?"; const r=byId[u.request_id];
+    const cust=(r&&r.customer_name)||"(unknown)";
+    const mins=Number(u.minutes);
+    const d=String(u.update_date||u.created_at||"").slice(0,10);
+    people[a]=people[a]||{total:0,custs:{}};
+    people[a].total+=mins; people[a].custs[cust]=(people[a].custs[cust]||0)+mins;
+    byCust[cust]=(byCust[cust]||0)+mins;
+    byDay[d]=(byDay[d]||0)+mins;
+    byType[isTech(r)?"tech":"sales"]+=mins;
+  });
+  const list=Object.entries(people).sort((a,b)=>b[1].total-a[1].total);
+  const grand=list.reduce((s,[,v])=>s+v.total,0);
+  return {mgr,start,end,who,logged,people,list,grand,byCust,byDay,byType};
+}
+function hbars(rows, color, fmt){
+  const f=fmt||fmtHrs;
+  if(!rows.length) return `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing to show yet.</div>`;
+  const max=Math.max(1,...rows.map(r=>r[1]));
+  return rows.map(([label,v])=>`<div class="hbrow"><span class="hblabel" title="${esc(label)}">${esc(label)}</span><div class="hbtrack"><div class="hbfill" style="width:${Math.max((v/max)*100,6)}%;background:${typeof color==="function"?color(label):color}">${f(v)}</div></div></div>`).join("");
+}
+const tally = (arr, keyFn) => Object.entries(arr.reduce((m,x)=>{ const k=keyFn(x)||"(none)"; m[k]=(m[k]||0)+1; return m; },{})).sort((a,b)=>b[1]-a[1]);
+const nfmt = n => String(n);
+function reportRange(){
+  const end=S.trEnd||today();
+  const start=S.trStart||(()=>{ const d=new Date(); d.setDate(d.getDate()-6); return isoLocal(d); })();
+  return {start,end};
+}
+function rangeControls(extra){
+  const {start,end}=reportRange();
+  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    ${extra||""}
+    <input type="date" id="tr_start" value="${esc(start)}" class="sortsel" style="width:auto"/>
+    <span class="tiny muted">\u2192</span>
+    <input type="date" id="tr_end" value="${esc(end)}" class="sortsel" style="width:auto"/>
+    <button class="qbtn" data-trweek="1">7 days</button>
+    <button class="qbtn" data-trmonth="1">30 days</button>
+  </div>`;
+}
+const cardsInRange = () => { const {start,end}=reportRange(); return S.rows.filter(r=>{ const d=String(r.submitted_at||"").slice(0,10); return d>=start&&d<=end; }); };
+const touchesInRange = () => { const {start,end}=reportRange(); return S.updates.filter(u=>{ const d=String(u.update_date||u.created_at||"").slice(0,10); return d>=start&&d<=end; }); };
+const reportHead = (title, sub, extra) => `<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div><h2 style="font-size:16px;font-weight:600;margin:0">${title}</h2>
+    <div class="tiny muted" style="margin-top:2px">${sub}</div></div>
+    ${rangeControls(extra)}
+  </div>
+</div>`;
+// Columns per day, or per week once the range gets long enough that days would be unreadable.
+function dayCols(byDay, start, end){
+  const s=new Date(start+"T00:00:00"), e=new Date(end+"T00:00:00");
+  const span=Math.round((e-s)/86400000)+1;
+  if(!(span>0)) return `<div class="tiny muted" style="font-style:italic;padding:8px 0">Pick a valid date range.</div>`;
+  const buckets=[];
+  if(span<=35){
+    for(let i=0;i<span;i++){ const d=new Date(s); d.setDate(d.getDate()+i);
+      buckets.push({ label:(d.getMonth()+1)+"/"+d.getDate(), v:byDay[isoLocal(d)]||0, wknd:(d.getDay()===0||d.getDay()===6) }); }
+  } else {
+    const cur=new Date(s);
+    while(cur<=e){ let v=0; const wk=new Date(cur);
+      for(let i=0;i<7;i++){ const d=new Date(cur); d.setDate(d.getDate()+i); if(d>e) break; v+=byDay[isoLocal(d)]||0; }
+      buckets.push({ label:(wk.getMonth()+1)+"/"+wk.getDate(), v, wknd:false });
+      cur.setDate(cur.getDate()+7); }
+  }
+  const max=Math.max(1,...buckets.map(b=>b.v));
+  const step=Math.ceil(buckets.length/12);
+  const bars=buckets.map(b=>`<div class="colslot" title="${esc(b.label)} — ${fmtHrs(b.v)}">
+    <div class="colval">${b.v?fmtHrs(b.v):""}</div>
+    <div class="colbar" style="height:${b.v?Math.max((b.v/max)*100,3):0}%;${b.v?"":"background:#e2e8f0;height:2px"}"></div>
+  </div>`).join("");
+  const labels=buckets.map((b,i)=>`<div class="collabel" style="${b.wknd?"color:#cbd5e1":""}">${i%step===0?esc(b.label):""}</div>`).join("");
+  return `<div class="colwrap">${bars}</div><div class="collabels">${labels}</div>
+    <div class="tiny muted" style="margin-top:8px">${span<=35?"One column per day":"One column per week"} · hover a column for the exact time.</div>`;
+}
+function timeReport(){
+  const d=timeData();
+  const view=S.reportView||"charts";
+  const peopleSel = d.mgr ? `<select class="sortsel" data-trwho>${["Everyone",...salespeopleList().filter(p=>p!=="Unassigned")].map(p=>`<option ${p===d.who?"selected":""}>${esc(p)}</option>`).join("")}</select>` : "";
+  const controls = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    ${peopleSel}
+    <input type="date" id="tr_start" value="${esc(d.start)}" class="sortsel" style="width:auto"/>
+    <span class="tiny muted">\u2192</span>
+    <input type="date" id="tr_end" value="${esc(d.end)}" class="sortsel" style="width:auto"/>
+    <button class="qbtn" data-trweek="1">This week</button>
+    <button class="qbtn" data-printtime="1">${I.printer}Print</button>
+  </div>`;
+  const viewToggle = `<div class="modeseg"><button data-reportview="charts" class="${view==="charts"?"active":""}">Charts</button><button data-reportview="table" class="${view==="table"?"active":""}">Table</button></div>`;
+
+  const dayCount=Object.keys(d.byDay).length;
+  const avgDay=dayCount?d.grand/dayCount:0;
+  const stat=(k,v,s)=>`<div class="card stat"><div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+
+  const table = `${d.list.length? `<div class="stack">${d.list.map(([a,v])=>{
+      const custs=Object.entries(v.custs).sort((x,y)=>y[1]-x[1]);
+      return `<div style="border:1px solid #eef2f6;border-radius:10px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-weight:700;color:#0f172a;font-size:14px">${esc(a)}</span>
+          <span style="font-weight:700;color:var(--accent);font-size:14px">${fmtHrs(v.total)}</span>
+        </div>
+        <div class="stack">${custs.map(([c,mins])=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#475569;padding:3px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c)}</span><span class="tiny" style="white-space:nowrap;color:#64748b">${fmtHrs(mins)}</span></div>`).join("")}</div>
+      </div>`;}).join("")}</div>`
+    : `<div class="tiny muted" style="font-style:italic;padding:16px 0">No time logged in this range.</div>`}`;
+
+  const topCust=Object.entries(d.byCust).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const splitTotal=d.byType.sales+d.byType.tech;
+  const charts = `
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      ${stat("Total logged", fmtHrs(d.grand), d.who==="Everyone"?"across the team":esc(d.who))}
+      ${stat("Days with activity", String(dayCount), "in this range")}
+      ${stat("Avg per active day", dayCount?fmtHrs(avgDay):"\u2014", "time logged")}
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Time by day</h2>
+      <div class="tiny muted" style="margin-bottom:6px">Where the hours actually landed across the range.</div>
+      ${dayCols(d.byDay, d.start, d.end)}
+    </div>
+    <div class="grid2" style="gap:16px;margin-bottom:16px">
+      ${d.mgr?`<div class="card">
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Time by person</h2>
+        <div class="tiny muted" style="margin-bottom:12px">Who logged what in this range.</div>
+        ${hbars(d.list.map(([a,v])=>[a,v.total]), "#2563eb")}
+      </div>`:""}
+      <div class="card"${d.mgr?"":` style="grid-column:1/-1"`}>
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Top customers by time</h2>
+        <div class="tiny muted" style="margin-bottom:12px">The ${topCust.length||"\u2014"} biggest time sinks${topCust.length===8?" (top 8)":""}.</div>
+        ${hbars(topCust, "#0d9488")}
+      </div>
+    </div>
+    ${splitTotal? `<div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Sales vs technical</h2>
+      <div class="tiny muted" style="margin-bottom:12px">How the time splits between the two kinds of work.</div>
+      <div class="splitbar">
+        ${d.byType.sales?`<div class="splitseg" style="width:${d.byType.sales/splitTotal*100}%;background:#2563eb">${Math.round(d.byType.sales/splitTotal*100)}%</div>`:""}
+        ${d.byType.tech?`<div class="splitseg" style="width:${d.byType.tech/splitTotal*100}%;background:#ea580c">${Math.round(d.byType.tech/splitTotal*100)}%</div>`:""}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px">
+        <span class="tiny" style="color:#64748b"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#2563eb;margin-right:5px"></span>Sales \u00b7 ${fmtHrs(d.byType.sales)}</span>
+        <span class="tiny" style="color:#64748b"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#ea580c;margin-right:5px"></span>Technical \u00b7 ${fmtHrs(d.byType.tech)}</span>
+      </div>
+    </div>`:""}`;
+
+  return `<div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h2 style="font-size:16px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px"><span style="color:#94a3b8;display:inline-flex">${I.clock}</span> Time logged</h2>
+      <div class="tiny muted" style="margin-top:2px">${fmtHrs(d.grand)}${d.mgr&&d.who==="Everyone"?` across ${d.list.length} ${d.list.length===1?"person":"people"}`:""} \u00b7 ${fmtDate(d.start)} \u2192 ${fmtDate(d.end)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${viewToggle}${controls}</div>
+    </div>
+  </div>
+  ${d.grand===0
+    ? `<div class="card"><div class="tiny muted" style="font-style:italic;padding:12px 0">No time logged in this range. Time is captured on each touch \u2014 the Minutes box on quick actions, or the Time spent field on the detailed form.</div></div>`
+    : (view==="charts"?charts:table)}`;
+}
+function printTimeReport(){
+  const d=timeData();
+  const body=d.list.map(([a,v])=>{
+    const custs=Object.entries(v.custs).sort((x,y)=>y[1]-x[1]);
+    return `<h2>${esc(a)} <span class="tot">${fmtHrs(v.total)}</span></h2>
+      <table><thead><tr><th>Customer</th><th class="r">Time</th></tr></thead><tbody>
+      ${custs.map(([c,m])=>`<tr><td>${esc(c)}</td><td class="r">${fmtHrs(m)}</td></tr>`).join("")}
+      </tbody></table>`;
+  }).join("");
+  const title=(d.who==="Everyone"?"Team time":esc(d.who)+" \u2014 time")+" logged \u00b7 "+fmtDate(d.start)+" to "+fmtDate(d.end);
+  const css="body{font-family:system-ui,-apple-system,sans-serif;margin:28px;color:#111}h1{font-size:18px;margin:0 0 2px}h2{font-size:14px;margin:22px 0 6px;border-bottom:2px solid #111;padding-bottom:4px;display:flex;justify-content:space-between}.tot{color:#444}.m{color:#666;font-size:12px;margin-bottom:8px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#666}td{border-bottom:1px solid #eee;padding:7px 8px}.r{text-align:right}.empty{color:#666;font-style:italic;margin-top:20px}@media print{body{margin:0}}";
+  const w=window.open("","_blank");
+  if(!w){ toast("Allow pop-ups to print the report.",false); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${css}</style></head><body><h1>${title}</h1><div class="m">Printed ${today()} \u00b7 ${fmtHrs(d.grand)} total</div>${body||'<div class="empty">No time logged in this range.</div>'}<scr`+`ipt>window.onload=function(){window.print();}</scr`+`ipt></body></html>`);
+  w.document.close();
+}
+function techBlock(){
+  const tech=S.rows.filter(isTech);
+  if(!tech.length) return "";
+  const openT=tech.filter(r=>OPEN_STATUSES.includes(r.status));
+  const resolved=tech.filter(r=>r.status==="Resolved");
+  const closedT=tech.filter(r=>r.status==="Resolved"||r.status==="Unresolved");
+  const resDays=closedT.filter(r=>r.last_action_date).map(r=>days(r.submitted_at,r.last_action_date));
+  const avgRes=resDays.length?(resDays.reduce((a,b)=>a+b,0)/resDays.length).toFixed(1):"—";
+  const byMfr=Object.entries(tech.reduce((m,r)=>{ const k=r.manufacturer||"Not recorded"; m[k]=(m[k]||0)+1; return m; },{})).sort((a,b)=>b[1]-a[1]);
+  const stat=(k,v,s,color)=>`<div class="card stat"><div class="k">${k}</div><div class="v" style="${color||''}">${v}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+  return `<div style="grid-column:1/-1">
+    <div style="font-size:13px;font-weight:600;color:#334155;margin:0 0 8px">Technical support</div>
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      ${stat("Open cases",openT.length,"still being worked",openT.length>3?"color:#d97706":"")}
+      ${stat("Resolved",resolved.length,"closed out successfully","color:#16a34a")}
+      ${stat("Avg days to close",avgRes==="—"?"—":avgRes+"d","opened → closed")}
+    </div>
+    <div class="grid2" style="gap:16px">
+      <div class="card">
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Cases by manufacturer</h2>
+        <div class="tiny muted" style="margin-bottom:12px">Where your support load actually comes from — useful at vendor review time.</div>
+        ${hbars(byMfr, "#ea580c", nfmt)}
+      </div>
+      <div class="card">
+        <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Cases by stage</h2>
+        <div class="tiny muted" style="margin-bottom:12px">Where tech cases are sitting right now.</div>
+        ${(()=>{ const byStage=Object.entries(tech.reduce((m,r)=>{ const k=stLabel(r.status); m[k]=(m[k]||0)+1; return m; },{})).sort((a,b)=>b[1]-a[1]);
+          if(!byStage.length) return `<div class="tiny muted" style="font-style:italic">Nothing yet.</div>`;
+          const maxS=Math.max(1,...byStage.map(x=>x[1]));
+          return byStage.map(([st,n])=>`<div class="hbrow"><span class="hblabel">${esc(st)}</span><div class="hbtrack"><div class="hbfill" style="width:${Math.max((n/maxS)*100,6)}%;background:${stageColor(st==="Closed"?"No action needed":st)}">${n}</div></div></div>`).join("");
+        })()}
+      </div>
+    </div>
+  </div>`;
+}
+const RISK_CATEGORIES = ["Lost customer","Buying elsewhere","Bad experience","Competitor issue","Pricing concern"];
+const statBox = (k,v,sub,color) => `<div class="card stat"><div class="k">${k}</div><div class="v" style="${color||''}">${v}</div>${sub?`<div class="s">${sub}</div>`:''}</div>`;
+
+// --- Customers: who are we actually touching, and who's slipping away? ---
+function customerReport(){
+  const cards=cardsInRange(), touches=touchesInRange();
+  const byId={}; S.rows.forEach(r=>byId[r.id]=r);
+  const norm=s=>(s||"").trim().toLowerCase();
+  const seen=new Set();
+  cards.forEach(r=>{ if(r.customer_name) seen.add(norm(r.customer_name)); });
+  touches.forEach(u=>{ const r=byId[u.request_id]; if(r&&r.customer_name) seen.add(norm(r.customer_name)); });
+  const dir=(S.customers||[]).length;
+  const cov = dir ? (seen.size/dir*100) : 0;
+  const byCards = tally(cards, r=>r.customer_name).slice(0,10);
+  const byTouch = {};
+  touches.forEach(u=>{ const r=byId[u.request_id]; if(!r) return; const k=r.customer_name||"(unknown)"; byTouch[k]=(byTouch[k]||0)+1; });
+  const topTouch = Object.entries(byTouch).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const risk = cards.filter(r=>RISK_CATEGORIES.includes(r.category));
+  const riskBy = tally(risk, r=>r.category);
+  return `${reportHead("Customers","Who's getting attention, and who's showing warning signs.")}
+  <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+    ${statBox("Customers touched", String(seen.size), "in this range")}
+    ${statBox("Directory coverage", dir?cov.toFixed(1)+"%":"\u2014", dir?("of "+dir.toLocaleString()+" on file"):"no directory loaded")}
+    ${statBox("Warning signs", String(risk.length), "cards flagged at risk", risk.length?"color:#e11d48":"color:#16a34a")}
+  </div>
+  <div class="grid2" style="gap:16px;margin-bottom:16px">
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Most cards</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Customers generating the most activity.</div>
+      ${hbars(byCards, "#2563eb", nfmt)}
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Most touches</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Customers we're working hardest.</div>
+      ${hbars(topTouch, "#0d9488", nfmt)}
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Warning signs</h2>
+    <div class="tiny muted" style="margin-bottom:12px">Cards flagged for reasons that mean a customer may be drifting. Tap any to open it.</div>
+    ${riskBy.length?`<div style="margin-bottom:14px">${hbars(riskBy, "#e11d48", nfmt)}</div>`:""}
+    ${risk.length? `<div class="stack">${risk.slice(0,15).map(r=>`<button class="dayrow" data-noteopen="${r.id}" style="align-items:center;justify-content:space-between;border-left-color:${stageColor(r.status)}">
+      <div style="min-width:0"><div style="font-size:14px;font-weight:600;color:#334155">${esc(r.customer_name)}</div>
+      <div class="tiny muted">${esc(r.category)} \u00b7 ${esc(r.branch||"")} \u00b7 ${r.assigned_to==="Unassigned"?"unassigned":esc(r.assigned_to)}</div></div>
+      ${pill(r.status)}
+    </button>`).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:8px 0">No warning signs in this range. \u{1F389}</div>`}
+  </div>`;
+}
+
+// --- Activity: what kind of work is coming in, and from where? ---
+function activityReport(){
+  const cards=cardsInRange(), touches=touchesInRange();
+  const byCat = tally(cards, r=>r.category);
+  const catColor = label => TECH_CATEGORIES.has(label) ? "#ea580c" : label==="Other" ? "#94a3b8" : "#2563eb";
+  const bySource = tally(cards, r=>r.source||"Counter");
+  const byBranch = tally(cards, r=>r.branch);
+  const byTouchType = tally(touches.filter(u=>u.contact_type), u=>u.contact_type);
+  const byUrg = tally(cards, r=>r.urgency);
+  const urgColor = u => u==="High"?"#f43f5e":u==="Medium"?"#f59e0b":"#94a3b8";
+  return `${reportHead("Activity","What's coming in, what kind of work it is, and where it's landing.")}
+  <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+    ${statBox("New cards", String(cards.length), "created in this range")}
+    ${statBox("Touches logged", String(touches.length), "interactions recorded")}
+    ${statBox("Technical share", cards.length?Math.round(cards.filter(isTech).length/cards.length*100)+"%":"\u2014", "of new cards")}
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Why customers are being flagged</h2>
+    <div class="tiny muted" style="margin-bottom:12px">Reasons on new cards \u2014 <span style="color:#2563eb;font-weight:600">blue is sales</span>, <span style="color:#ea580c;font-weight:600">orange is technical</span>.</div>
+    ${hbars(byCat, catColor, nfmt)}
+  </div>
+  <div class="grid2" style="gap:16px;margin-bottom:16px">
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Where work comes from</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Counter, field, projects, recurring.</div>
+      ${hbars(bySource, "#7c3aed", nfmt)}
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">By branch</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Which branches are generating cards.</div>
+      ${hbars(byBranch, "#0d9488", nfmt)}
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">How we're reaching out</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Touch types logged in this range.</div>
+      ${hbars(byTouchType, "#2563eb", nfmt)}
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Urgency mix</h2>
+      <div class="tiny muted" style="margin-bottom:12px">How hot the incoming work is.</div>
+      ${hbars(byUrg, urgColor, nfmt)}
+    </div>
+  </div>`;
+}
+
+// --- Outcomes: are we actually closing things, and how fast? ---
+function outcomesReport(){
+  const cards=cardsInRange();
+  const n=st=>cards.filter(r=>r.status===st).length;
+  const won=n("Won"), lost=n("Lost"), res=n("Resolved"), unres=n("Unresolved");
+  const open=cards.filter(r=>OPEN_STATUSES.includes(r.status)).length;
+  const winRate = (won+lost) ? Math.round(won/(won+lost)*100)+"%" : "\u2014";
+  const resRate = (res+unres) ? Math.round(res/(res+unres)*100)+"%" : "\u2014";
+  const touched=cards.filter(r=>r.first_touched_at);
+  const resp = touched.length ? (touched.reduce((s,r)=>s+days(r.submitted_at,r.first_touched_at),0)/touched.length).toFixed(1)+"d" : "\u2014";
+  const closed=cards.filter(r=>!OPEN_STATUSES.includes(r.status) && r.last_action_date);
+  const cycle = closed.length ? (closed.reduce((s,r)=>s+days(r.submitted_at,r.last_action_date),0)/closed.length).toFixed(1)+"d" : "\u2014";
+  const mix=[["Open",open],["Won",won],["Lost",lost],["Resolved",res],["Unresolved",unres],["Closed",n("No action needed")]].filter(x=>x[1]>0);
+  const mixColor = l => stageColor(l==="Closed"?"No action needed":l==="Open"?"New":l);
+  const byPerson={};
+  cards.forEach(r=>{ if(!["Won","Lost","Resolved","Unresolved"].includes(r.status)) return;
+    const k=r.assigned_to||"Unassigned"; byPerson[k]=byPerson[k]||{good:0,bad:0};
+    if(r.status==="Won"||r.status==="Resolved") byPerson[k].good++; else byPerson[k].bad++; });
+  const people=Object.entries(byPerson).sort((a,b)=>(b[1].good+b[1].bad)-(a[1].good+a[1].bad));
+  const aging=cards.filter(r=>OPEN_STATUSES.includes(r.status));
+  const buckets=[["0\u20132 days",0],["3\u20135 days",0],["6\u201310 days",0],["Over 10 days",0]];
+  aging.forEach(r=>{ const a=days(r.submitted_at,today()); if(a<=2)buckets[0][1]++; else if(a<=5)buckets[1][1]++; else if(a<=10)buckets[2][1]++; else buckets[3][1]++; });
+  const ageColor = l => l==="Over 10 days"?"#e11d48":l==="6\u201310 days"?"#f59e0b":"#0d9488";
+  return `${reportHead("Outcomes","Whether the work is closing \u2014 and how long it takes.")}
+  <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${statBox("Win rate", winRate, "of decided sales leads", won?"color:#16a34a":"")}
+    ${statBox("Resolve rate", resRate, "of closed tech cases", res?"color:#16a34a":"")}
+    ${statBox("Avg response", resp, "submitted \u2192 first touch")}
+    ${statBox("Avg time to close", cycle, "submitted \u2192 closed")}
+  </div>
+  <div class="grid2" style="gap:16px;margin-bottom:16px">
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Where cards ended up</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Cards created in this range, by their status today.</div>
+      ${hbars(mix, mixColor, nfmt)}
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">How long open work has been sitting</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Still-open cards by age. Red is the pile to worry about.</div>
+      ${hbars(buckets.filter(b=>b[1]>0), ageColor, nfmt)}
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Results by person</h2>
+    <div class="tiny muted" style="margin-bottom:12px">Decided cards only \u2014 <span style="color:#16a34a;font-weight:600">won or resolved</span> vs <span style="color:#e11d48;font-weight:600">lost or unresolved</span>.</div>
+    ${people.length? people.map(([who,v])=>{ const tot=v.good+v.bad;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:600;color:#334155">${esc(who)}</span><span class="tiny muted">${v.good} of ${tot} \u00b7 ${Math.round(v.good/tot*100)}%</span></div>
+        <div class="splitbar" style="height:20px">
+          ${v.good?`<div class="splitseg" style="width:${v.good/tot*100}%;background:#16a34a">${v.good}</div>`:""}
+          ${v.bad?`<div class="splitseg" style="width:${v.bad/tot*100}%;background:#e11d48">${v.bad}</div>`:""}
+        </div>
+      </div>`; }).join("")
+    : `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing decided in this range yet.</div>`}
+  </div>`;
+}
+const RTABS = [["time","Time"],["customers","Customers"],["activity","Activity"],["outcomes","Outcomes"],["tech","Tech"]];
+function viewReports(){
+  const full = ["manager","admin","viewer"].includes(S.persona.type);
+  const rt = full ? (S.reportTab||"time") : "time";
+  const nav = full ? `<div class="modeseg" style="margin-bottom:16px">${RTABS.map(([k,l])=>`<button data-reporttab="${k}" class="${rt===k?'active':''}">${l}</button>`).join("")}</div>` : "";
+  let body;
+  if(rt==="customers") body=customerReport();
+  else if(rt==="activity") body=activityReport();
+  else if(rt==="outcomes") body=outcomesReport();
+  else if(rt==="tech") body=techBlock()||`<div class="card"><div class="tiny muted" style="font-style:italic;padding:12px 0">No technical cases yet — they'll show up here once Whitney (or the counter) logs one.</div></div>`;
+  else body=timeReport();
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:12px">
+    <h1 class="page">Reports</h1>
+    <button class="qbtn" data-refresh>${I.refresh} Refresh</button>
+  </div>
+  <div class="tiny muted" style="margin-bottom:16px">${full
+    ? "The whole picture — time, customers, the work coming in, and whether it's closing."
+    : "The time you've logged, by customer. Pick a date range and print it if you need a copy."}</div>
+  ${nav}
+  ${body}`;
+}
+function ideasCard(){
+  const ideas=S.ideas||[];
+  const fresh=ideas.filter(i=>i.status==="New");
+  return `<div class="card" style="margin-bottom:20px;border:1px solid ${fresh.length?"#fde68a":"#f1f5f9"};background:${fresh.length?"#fffdf5":"#fff"}">
+    <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#f59e0b">\u{1F4A1}</span> Ideas &amp; problems ${fresh.length?`<span class="pill" style="${IDEA_STYLE.New}">${fresh.length} new</span>`:""}</h2>
+    <div class="tiny muted" style="margin-bottom:12px">What the team sent from the lightbulb in the header.${ideas.length?` Mark one <b>Shipped</b> when you build it, then credit them in the changelog \u2014 that's what makes a second idea happen.`:""}</div>
+    ${ideas.length? `<div>${ideas.map(i=>`
+      <div style="padding:10px 0;border-bottom:1px solid #f1f5f9">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
+          <span>${i.kind==="bug"?"\u{1F41B}":"\u{1F4A1}"}</span>
+          <span style="font-weight:600;color:#334155;font-size:13px">${esc(i.submitted_by)}</span>
+          <span class="tiny muted">${esc(fmtDateTime(i.created_at,i.created_at))}${i.context?" \u00b7 "+esc(i.context):""}${i.app_version?" \u00b7 v"+esc(i.app_version):""}</span>
+          <span style="flex:1"></span>
+          <select class="sortsel" data-istatus="${i.id}" ${S.busy?"disabled":""}>${IDEA_STATUS.map(st=>`<option ${i.status===st?"selected":""}>${esc(st)}</option>`).join("")}</select>
+          <button class="linkish" data-iremove="${i.id}" style="color:#dc2626" ${S.busy?"disabled":""}>Remove</button>
+        </div>
+        <div style="font-size:14px;color:#475569;white-space:pre-wrap">${esc(i.body)}</div>
+      </div>`).join("")}</div>`
+    : `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing yet. The lightbulb sits in the header next to the version \u2014 on every screen, for everyone.</div>`}
   </div>`;
 }
 function viewManager() {
@@ -1433,14 +2130,56 @@ function viewManager() {
       <h1 class="page">Manager view</h1>
       <button class="filters" data-refresh style="border:1px solid #e2e8f0;padding:6px 12px;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:#fff">${I.refresh} Refresh</button>
     </div>
-    ${S.persona.type==="admin"?`<div class="card" style="margin-bottom:20px;border:1px solid #ede9fe;background:#faf9ff">
+    ${S.persona.type==="admin"?`${ideasCard()}
+    <div class="card" style="margin-bottom:20px;border:1px solid #e0f2fe;background:#f9fdff">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#0284c7;display:inline-flex">${I.bldg}</span> People &amp; roles</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Add someone and give them a role — it flows everywhere: the persona switcher, assignment dropdowns, calendar filters, and reports. A <b>Salesperson</b> sees sales reasons; <b>Tech Support</b> sees technical ones.${(S.people||[]).some(x=>x.active&&!x.email)?` <span style="color:#b45309;font-weight:600">Email is what will connect a login to a person — fill them in before you switch logins on.</span>`:""}</div>
+      ${(S.people||[]).length? `<div style="margin-bottom:4px">${(S.people||[]).map(x=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+          <span style="width:9px;height:9px;border-radius:50%;background:${x.active?accentFor(x.role):'#cbd5e1'};flex:none"></span>
+          <span style="font-weight:600;color:#334155;flex:1;min-width:80px;${x.active?'':'opacity:.45;text-decoration:line-through'}">${esc(x.name)}</span>
+          <input type="email" data-pemail="${x.id}" value="${esc(x.email||'')}" placeholder="email — for logins" style="flex:1;min-width:150px;padding:5px 8px;font-size:12px;${x.email?'':'border-color:#fed7aa;background:#fffbf6'}" ${S.busy?'disabled':''}/>
+          <select class="sortsel" data-prole="${x.id}" ${S.busy?'disabled':''}>${ROLES.map(r=>`<option value="${r}" ${x.role===r?'selected':''}>${esc(ROLE_LABEL[r])}</option>`).join("")}</select>
+          <button class="linkish" data-pactive="${x.id}" ${S.busy?'disabled':''}>${x.active?'Deactivate':'Activate'}</button>
+          <button class="linkish" data-premove="${x.id}" style="color:#dc2626" ${S.busy?'disabled':''}>Remove</button>
+        </div>`).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:8px 0">No people loaded — the app is using its built-in list. Run the people SQL, then hit Refresh.</div>`}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="np_name" placeholder="New person's name" style="flex:1;min-width:130px"/>
+        <input id="np_email" type="email" placeholder="Email (optional for now)" style="flex:1;min-width:150px"/>
+        <select id="np_role" class="sortsel">${ROLES.map(r=>`<option value="${r}" ${r==="sales"?"selected":""}>${esc(ROLE_LABEL[r])}</option>`).join("")}</select>
+        <button class="btn" id="np_add" ${S.busy?'disabled':''} style="background:#0284c7">${I.plus} Add person</button>
+      </div>
+      <div class="tiny muted" style="margin-top:8px">Deactivating hides someone from the app but keeps their history. Removing is permanent — cards they own keep their name.</div>
+    </div>
+    <div class="card" style="margin-bottom:20px;border:1px solid #ede9fe;background:#faf9ff">
       <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#7c3aed;display:inline-flex">${I.clip}</span> Customer list</h2>
-      <div class="tiny muted" style="margin-bottom:12px">${(S.customers||[]).length} customer${(S.customers||[]).length===1?'':'s'} loaded for autocomplete. Upload a CSV — columns Name, Account #, Address, Phone — to replace the whole list.</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input type="file" id="cust_file" accept=".csv,text/csv" style="font-size:13px"/>
-        <button class="btn" id="cust_import" ${S.busy?'disabled':''}>${S.busy?'Importing…':'Replace list'}</button>
+      <div class="tiny muted" style="margin-bottom:12px">${(S.customers||[]).length} customer${(S.customers||[]).length===1?'':'s'} loaded for autocomplete. Upload a CSV — Name, Account #, Address 1, Address 2, City, State, Zip, Phone — to replace the whole list.</div>
+      <div class="dropzone${S.pendingFile?' ready':''}" id="cust_drop">
+        <input type="file" id="cust_file" accept=".csv,text/csv" style="display:none"/>
+        ${S.pendingFile
+          ? `<div class="dz-big" style="color:#166534">✓ ${esc(S.pendingFile.name)}</div><div class="dz-sub">Ready to import — hit “Replace list” below. Drop another file to swap it.</div>`
+          : `<div class="dz-big">Drop your CSV here</div><div class="dz-sub">or tap to browse</div>`}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn" id="cust_import" ${(S.busy||!S.pendingFile)?'disabled':''} style="${!S.pendingFile?'opacity:.5':''}">${S.busy?'Importing…':'Replace list'}</button>
+        ${S.pendingFile?`<button class="btn-ghost" id="cust_clear" ${S.busy?'disabled':''}>Cancel</button>`:''}
       </div>
       <div class="tiny muted" style="margin-top:8px">A header row is fine. Replacing swaps the entire directory — no merge, no duplicates.</div>
+    </div>
+    <div class="card" style="margin-bottom:20px;border:1px solid #ffedd5;background:#fffcf8">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#ea580c;display:inline-flex">${I.clip}</span> Manufacturer list</h2>
+      <div class="tiny muted" style="margin-bottom:12px">${(S.manufacturers||[]).length? `${(S.manufacturers||[]).length} brands loaded — used by the Manufacturer dropdown on tech cases.` : `<span style="color:#dc2626;font-weight:600">None loaded</span> — the dropdown is using a built-in starter list until you upload yours.`} One column: the brand name.</div>
+      <div class="dropzone${S.pendingMfr?' ready':''}" id="mfr_drop" style="border-color:${S.pendingMfr?'#86efac':'#fed7aa'};background:${S.pendingMfr?'#f0fdf4':'#fffbf6'}">
+        <input type="file" id="mfr_file" accept=".csv,text/csv" style="display:none"/>
+        ${S.pendingMfr
+          ? `<div class="dz-big" style="color:#166534">✓ ${esc(S.pendingMfr.name)}</div><div class="dz-sub">Ready to import — hit “Replace brands” below.</div>`
+          : `<div class="dz-big" style="color:#9a3412">Drop your brand CSV here</div><div class="dz-sub">or tap to browse</div>`}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn" id="mfr_import" ${(S.busy||!S.pendingMfr)?'disabled':''} style="background:#ea580c;${!S.pendingMfr?'opacity:.5':''}">${S.busy?'Importing…':'Replace brands'}</button>
+        ${S.pendingMfr?`<button class="btn-ghost" id="mfr_clear" ${S.busy?'disabled':''}>Cancel</button>`:''}
+      </div>
+      <div class="tiny muted" style="margin-top:8px">Duplicates are dropped automatically. Replacing swaps the entire list.</div>
     </div>`:""}
     <div style="margin-bottom:8px;display:flex;align-items:baseline;gap:8px">
       <span style="font-size:13px;font-weight:600;color:#334155">Needs attention right now</span>
@@ -1538,33 +2277,162 @@ function viewManager() {
 
 // ---- Events -----------------------------------------------------------
 function bind() {
-  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=PERSONAS.find(p=>p.id===b.dataset.persona); S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=S.persona.type==="sales"?"mine":"everyone"; S.filter="Open"; S.special=null; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; logActivity("session","opened the app"); render(); });
+  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=personaList().find(p=>String(p.id)===b.dataset.persona)||S.persona; S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=isFieldLevel(S.persona)?"mine":"everyone"; S.filter="Open"; S.special=null; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; if(S.persona.type==="viewer"&&["submit","mine"].includes(S.tab))S.tab="sales"; logActivity("session","opened the app"); render(); });
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
   const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
   const qc=document.querySelector("[data-clearsearch]"); if(qc) qc.onclick=()=>{ S.search=""; S._focus="q_search"; render(); };
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ S.selectedId=b.dataset.open; render(); });
   document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>{ S.selectedId=null; render(); });
   document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{ S.filter=b.dataset.filter; S.special=null; render(); });
+  document.querySelectorAll("[data-typefilter]").forEach(b=>b.onclick=()=>{ S.typeFilter=b.dataset.typefilter; render(); });
   document.querySelectorAll("[data-minefilter]").forEach(b=>b.onclick=()=>{ S.mineFilter=b.dataset.minefilter; render(); });
   document.querySelectorAll("[data-subscope]").forEach(b=>b.onclick=()=>{ S.subScope=b.dataset.subscope; render(); });
   const so=document.querySelector("[data-sort]"); if(so) so.onchange=()=>{ S.sort=so.value; render(); };
-  document.querySelectorAll("[data-refresh]").forEach(rf=>rf.onclick=()=>{ load(); toast("Refreshed from database."); });
+  document.querySelectorAll("[data-refresh]").forEach(rf=>rf.onclick=()=>{ load({full:true}); toast("Refreshed from database."); });
+  function wireDrop(zoneId, fileId, stateKey){
+    const dz=document.getElementById(zoneId); if(!dz) return;
+    const fileEl=document.getElementById(fileId);
+    const stage=(f)=>{
+      if(!f) return;
+      if(!/\.csv$/i.test(f.name) && f.type!=="text/csv"){ toast("That doesn't look like a CSV file.",false); return; }
+      S[stateKey]=f; render();
+    };
+    dz.onclick=()=>{ if(!S.busy) fileEl.click(); };
+    fileEl.onchange=()=>stage(fileEl.files&&fileEl.files[0]);
+    ["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add("over"); }));
+    ["dragleave","drop"].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove("over"); }));
+    dz.addEventListener("drop",e=>{ const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; stage(f); });
+  }
+  wireDrop("cust_drop","cust_file","pendingFile");
+  wireDrop("mfr_drop","mfr_file","pendingMfr");
+  const cclr=document.getElementById("cust_clear");
+  if(cclr) cclr.onclick=()=>{ S.pendingFile=null; render(); };
+  const mclr=document.getElementById("mfr_clear");
+  if(mclr) mclr.onclick=()=>{ S.pendingMfr=null; render(); };
+  const mimp=document.getElementById("mfr_import");
+  if(mimp) mimp.onclick=async()=>{
+    const file=S.pendingMfr;
+    if(!file){ toast("Drop a CSV file first.",false); return; }
+    let text; try{ text=await file.text(); }catch(_){ toast("Couldn't read that file.",false); return; }
+    const list=csvToManufacturers(text);
+    if(!list.length){ toast("No brands found in that file.",false); return; }
+    if(!confirm("Replace the manufacturer list with "+list.length+" brand"+(list.length===1?"":"s")+" from this file?")) return;
+    S.busy=true; render();
+    try{ await replaceManufacturers(list); logActivity("mfr_import","uploaded "+list.length+" manufacturers"); S.pendingMfr=null; toast(list.length+" brands loaded."); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Import failed — check the file and try again.",false); S.busy=false; render(); }
+  };
   const cimp=document.getElementById("cust_import");
   if(cimp) cimp.onclick=async()=>{
-    const fileEl=document.getElementById("cust_file");
-    const file=fileEl&&fileEl.files&&fileEl.files[0];
-    if(!file){ toast("Choose a CSV file first.",false); return; }
+    const file=S.pendingFile;
+    if(!file){ toast("Drop a CSV file first.",false); return; }
     let text; try{ text=await file.text(); }catch(_){ toast("Couldn't read that file.",false); return; }
     const list=csvToCustomers(text);
     if(!list.length){ toast("No customers found in that file.",false); return; }
     if(!confirm("Replace the entire customer list with "+list.length+" customer"+(list.length===1?"":"s")+" from this file?")) return;
     S.busy=true; render();
-    try{ await replaceCustomers(list); logActivity("customer_import","uploaded "+list.length+" customers"); toast(list.length+" customers loaded."); S.busy=false; await load(); }
+    try{ await replaceCustomers(list); logActivity("customer_import","uploaded "+list.length+" customers"); S.pendingFile=null; toast(list.length+" customers loaded."); S.busy=false; await load({full:true}); }
     catch(e){ toast("Import failed — check the file and try again.",false); S.busy=false; render(); }
   };
+  document.querySelectorAll("[data-prole]").forEach(sel=>sel.onchange=async()=>{
+    const x=(S.people||[]).find(y=>String(y.id)===sel.dataset.prole); if(!x) return;
+    S.busy=true; render();
+    try{ await sbPatch("cp_people","id=eq."+x.id,{ role:sel.value }); logActivity("people","set "+x.name+" to "+(ROLE_LABEL[sel.value]||sel.value)); toast(x.name+" is now "+(ROLE_LABEL[sel.value]||sel.value)+"."); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't change the role. Try again.",false); S.busy=false; render(); }
+  });
+  document.querySelectorAll("[data-pactive]").forEach(b=>b.onclick=async()=>{
+    const x=(S.people||[]).find(y=>String(y.id)===b.dataset.pactive); if(!x) return;
+    if(x.active && x.name===S.persona.name){ toast("You can't deactivate the person you're viewing as.",false); return; }
+    S.busy=true; render();
+    try{ await sbPatch("cp_people","id=eq."+x.id,{ active:!x.active }); logActivity("people",(x.active?"deactivated ":"activated ")+x.name); toast(x.name+(x.active?" deactivated.":" is back.")); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't update. Try again.",false); S.busy=false; render(); }
+  });
+  document.querySelectorAll("[data-premove]").forEach(b=>b.onclick=async()=>{
+    const x=(S.people||[]).find(y=>String(y.id)===b.dataset.premove); if(!x) return;
+    if(x.name===S.persona.name){ toast("You can't remove the person you're viewing as.",false); return; }
+    if(!confirm("Remove "+x.name+" permanently?\n\nCards they own keep their name, but they'll disappear from the app. Deactivating is usually the safer choice.")) return;
+    S.busy=true; render();
+    try{ await sbDelete("cp_people","id=eq."+x.id); logActivity("people","removed "+x.name); toast(x.name+" removed."); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't remove. Try again.",false); S.busy=false; render(); }
+  });
+  document.querySelectorAll("[data-pemail]").forEach(inp=>inp.onchange=async()=>{
+    const x=(S.people||[]).find(y=>String(y.id)===inp.dataset.pemail); if(!x) return;
+    const v=inp.value.trim();
+    if(v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ toast("That doesn't look like an email address.",false); return; }
+    if((v===(x.email||""))) return;
+    S.busy=true; render();
+    try{ await sbPatch("cp_people","id=eq."+x.id,{ email:v||null }); logActivity("people","set an email for "+x.name); toast(v?("Email saved for "+x.name+"."):("Email cleared for "+x.name+".")); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't save — is that email already used by someone else?",false); S.busy=false; await load({full:true}); }
+  });
+  const npa=document.getElementById("np_add");
+  if(npa) npa.onclick=async()=>{
+    const name=document.getElementById("np_name").value.trim();
+    const emEl=document.getElementById("np_email");
+    const email=emEl?emEl.value.trim():"";
+    const role=document.getElementById("np_role").value;
+    if(!name){ toast("Give them a name first.",false); return; }
+    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("That doesn't look like an email address.",false); return; }
+    if((S.people||[]).some(x=>x.name.toLowerCase()===name.toLowerCase())){ toast(name+" is already on the list.",false); return; }
+    S.busy=true; render();
+    try{ await sbPost("cp_people",{ name, role, email:email||null, active:true, sort_order:100 }); logActivity("people","added "+name+" as "+(ROLE_LABEL[role]||role)); toast(name+" added as "+(ROLE_LABEL[role]||role)+"."); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't add them. Did you run the people SQL?",false); S.busy=false; render(); }
+  };
+  document.querySelectorAll("[data-editmins]").forEach(b=>b.onclick=()=>{ S.editTouch=b.dataset.editmins; render(); });
+  const cmn=document.querySelector("[data-cancelmins]"); if(cmn) cmn.onclick=()=>{ S.editTouch=null; render(); };
+  const smn=document.querySelector("[data-savemins]");
+  if(smn) smn.onclick=async()=>{
+    const id=smn.dataset.savemins;
+    const raw=document.getElementById("et_mins").value.trim();
+    const mins = raw==="" ? null : Number(raw);
+    if(mins!==null && (isNaN(mins) || mins<0)){ toast("Minutes needs to be a number.",false); return; }
+    S.busy=true; render();
+    try{
+      await sbPatch("cp_updates","id=eq."+id,{ minutes:mins });
+      logActivity("touch_edit","corrected the time on a touch");
+      S.editTouch=null; toast(mins?("Time set to "+mins+" min."):"Time cleared."); S.busy=false; await load();
+    }catch(e){ toast("Couldn't save the correction. Try again.",false); S.busy=false; render(); }
+  };
+  document.querySelectorAll("[data-deltouch]").forEach(b=>b.onclick=async()=>{
+    const u=S.updates.find(x=>String(x.id)===b.dataset.deltouch); if(!u) return;
+    if(!confirm("Remove this touch?\n\nIt disappears from the timeline and from the time reports. This can't be undone.")) return;
+    S.busy=true; render();
+    try{ await sbDelete("cp_updates","id=eq."+u.id); logActivity("touch_edit","removed a touch"); toast("Touch removed."); S.busy=false; await load(); }
+    catch(e){ toast("Couldn't remove it — did you run the touch-fix SQL?",false); S.busy=false; render(); }
+  });
   const cl=document.querySelector("[data-changelog]"); if(cl) cl.onclick=openChangelog;
-  document.querySelectorAll("[data-modal-close]").forEach(b=>b.onclick=closeChangelog);
-  const ov=document.querySelector("[data-modal-overlay]"); if(ov) ov.onclick=(e)=>{ if(e.target===ov) closeChangelog(); };
+  document.querySelectorAll("[data-idea]").forEach(b=>b.onclick=openIdea);
+  document.querySelectorAll("[data-ideakind]").forEach(b=>b.onclick=()=>{
+    const t=document.getElementById("idea_body"); if(t) S.ideaDraft=t.value;
+    S.ideaKind=b.dataset.ideakind; render();
+  });
+  const isnd=document.getElementById("idea_send");
+  if(isnd) isnd.onclick=async()=>{
+    const body=document.getElementById("idea_body").value.trim();
+    if(!body){ toast("Tell me what's on your mind first.",false); return; }
+    S.busy=true; render();
+    try{
+      await sbPost("cp_ideas",{ submitted_by:S.persona.name, kind:S.ideaKind||"idea", body, context:ideaContext(), app_version:APP_VERSION, status:"New" });
+      logActivity("idea",(S.ideaKind==="bug"?"reported a problem":"sent an idea"));
+      S.showIdea=false; S.ideaDraft=null; S.ideaKind=null; S.busy=false;
+      toast((S.ideaKind==="bug"?"Thanks — logged it.":"Got it — thanks!"));
+      await load({full:true});
+    }catch(e){ toast("Couldn't send it. Did you run the ideas SQL?",false); S.busy=false; render(); }
+  };
+  document.querySelectorAll("[data-istatus]").forEach(sel=>sel.onchange=async()=>{
+    const i=(S.ideas||[]).find(x=>String(x.id)===sel.dataset.istatus); if(!i) return;
+    S.busy=true; render();
+    try{ await sbPatch("cp_ideas","id=eq."+i.id,{ status:sel.value }); toast(esc(i.submitted_by)+"'s "+(i.kind==="bug"?"report":"idea")+" \u2192 "+sel.value+"."); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't update it. Try again.",false); S.busy=false; render(); }
+  });
+  document.querySelectorAll("[data-iremove]").forEach(b=>b.onclick=async()=>{
+    const i=(S.ideas||[]).find(x=>String(x.id)===b.dataset.iremove); if(!i) return;
+    if(!confirm("Remove this permanently?")) return;
+    S.busy=true; render();
+    try{ await sbDelete("cp_ideas","id=eq."+i.id); toast("Removed."); S.busy=false; await load({full:true}); }
+    catch(e){ toast("Couldn't remove it. Try again.",false); S.busy=false; render(); }
+  });
+  const closeAny=()=>{ if(S.showIdea) closeIdea(); else closeChangelog(); };
+  document.querySelectorAll("[data-modal-close]").forEach(b=>b.onclick=closeAny);
+  const ov=document.querySelector("[data-modal-overlay]"); if(ov) ov.onclick=(e)=>{ if(e.target===ov) closeAny(); };
   document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>quick(S.rows.find(x=>x.id===S.selectedId), b.dataset.quick));
   document.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ S.scope=b.dataset.scope; S.special=null; render(); });
   document.querySelectorAll("[data-salesview]").forEach(b=>b.onclick=()=>{ S.salesView=b.dataset.salesview; render(); });
@@ -1583,6 +2451,14 @@ function bind() {
     render();
   });
   const pd=document.querySelector("[data-printday]"); if(pd) pd.onclick=printDay;
+  const trs=document.getElementById("tr_start"); if(trs) trs.onchange=()=>{ S.trStart=trs.value; render(); };
+  const tre=document.getElementById("tr_end"); if(tre) tre.onchange=()=>{ S.trEnd=tre.value; render(); };
+  const trw=document.querySelector("[data-trweek]"); if(trw) trw.onclick=()=>{ const d=new Date(); d.setDate(d.getDate()-6); S.trStart=d.toISOString().slice(0,10); S.trEnd=today(); render(); };
+  const ptr=document.querySelector("[data-printtime]"); if(ptr) ptr.onclick=printTimeReport;
+  document.querySelectorAll("[data-reportview]").forEach(b=>b.onclick=()=>{ S.reportView=b.dataset.reportview; render(); });
+  document.querySelectorAll("[data-reporttab]").forEach(b=>b.onclick=()=>{ S.reportTab=b.dataset.reporttab; render(); });
+  const trm=document.querySelector("[data-trmonth]"); if(trm) trm.onclick=()=>{ const d=new Date(); d.setDate(d.getDate()-29); S.trStart=isoLocal(d); S.trEnd=today(); render(); };
+  const trw2=document.querySelector("[data-trwho]"); if(trw2) trw2.onchange=()=>{ S.trWho=trw2.value; render(); };
   document.querySelectorAll("[data-notefilter]").forEach(b=>b.onclick=()=>{ S.noteFilter=b.dataset.notefilter; render(); });
   document.querySelectorAll("[data-notescope]").forEach(b=>b.onclick=()=>{ S.noteScope=b.dataset.notescope; render(); });
   document.querySelectorAll("[data-mgrnotefilter]").forEach(b=>b.onclick=()=>{ S.mgrNoteFilter=b.dataset.mgrnotefilter; render(); });
@@ -1598,6 +2474,18 @@ function bind() {
   const al=document.querySelector("[data-assign-lead]"); if(al) al.onchange=()=>assignLead(S.rows.find(x=>x.id===S.selectedId), al.value);
   const ph=document.getElementById("s_phone"); if(ph) ph.onblur=()=>{ ph.value=fmtPhone(ph.value); };
   document.querySelectorAll("[data-dateset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.dateset); if(el) el.value=dateShortcut(b.dataset.datekey); });
+  document.querySelectorAll("[data-minset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById("u_mins"); if(el) el.value=b.dataset.minset; });
+  const smEl=document.getElementById("s_mins");
+  if(smEl){
+    document.querySelectorAll("[data-sminset]").forEach(b=>b.onclick=()=>{ smEl.value=b.dataset.sminset; smEl.dataset.touched="1"; });
+    smEl.addEventListener("input",()=>{ smEl.dataset.touched="1"; });
+    const sAct=document.getElementById("s_action");
+    if(sAct){
+      // Follow the contact type — but never overwrite a number they typed themselves.
+      const sync=()=>{ if(smEl.dataset.touched!=="1") smEl.value=FIRST_MINS[sAct.value]||15; };
+      sAct.addEventListener("change",sync); sync();
+    }
+  }
   document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.scroll); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); });
   document.querySelectorAll("[data-mgr-jump]").forEach(b=>b.onclick=()=>{ S.special=b.dataset.mgrJump; S.tab="sales"; S.selectedId=null; S.scope="everyone"; render(); });
   const cs=document.querySelector("[data-clearspecial]"); if(cs) cs.onclick=()=>{ S.special=null; render(); };
@@ -1611,18 +2499,51 @@ function bind() {
 
   const sb=document.getElementById("s_submit");
   if(sb) sb.onclick=async()=>{
-    const g=id=>document.getElementById(id).value.trim();
+    const g=id=>{ const el=document.getElementById(id); return el?el.value.trim():""; };
     const field=S.persona.type!=="employee";
-    const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, address1:g("s_addr1")||null, address2:g("s_addr2")||null, city:g("s_city")||null, state:g("s_state")||null, zip:g("s_zip")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category:document.getElementById("s_category").value, urgency:document.getElementById("s_urgency").value, reason:g("s_reason") };
+    const isTechPersona=S.persona.type==="tech";
+    const category=document.getElementById("s_category").value;
+    const type = isTechPersona || TECH_CATEGORIES.has(category) ? "tech" : "sales";
+    const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, address1:g("s_addr1")||null, address2:g("s_addr2")||null, city:g("s_city")||null, state:g("s_state")||null, zip:g("s_zip")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category, urgency:document.getElementById("s_urgency").value, reason:g("s_reason"),
+      type, manufacturer:g("s_mfr")||null, model:g("s_model")||null, serial:g("s_serial")||null, case_number:g("s_caseno")||null, issue:g("s_issue")||null };
     if(!base.customer_name||!base.reason){ toast("Customer name and the details are required.",false); return; }
-    const payload = field
-      ? { ...base, source:"Field call", assigned_to:S.persona.name, status:document.getElementById("s_status").value, next_follow_up:document.getElementById("s_next").value||null, follow_up_topic:g("s_topic")||null, first_touched_at:today(), last_action_date:today() }
+    if(type==="tech" && field && isTechPersona && !base.issue){ toast("Describe the issue before logging it.",false); return; }
+    const lead = S.submitMode==="lead" && field;
+    const ownerEl=document.getElementById("s_owner");
+    const owner=(ownerEl&&ownerEl.value)||S.persona.name;
+    const handedOff = field && !lead && owner!==S.persona.name;
+    if(lead && !ownerEl.value){ toast("Pick who should chase this.",false); return; }
+    const payload = lead
+      ? { ...base, source:leadSourceOf(S.persona), assigned_to:owner, status:"Assigned",
+          next_follow_up:document.getElementById("s_next").value||null }
+      : field
+      ? { ...base, source:"Field call", assigned_to:owner, status:(owner==="Unassigned"?"New":document.getElementById("s_status").value), next_follow_up:document.getElementById("s_next").value||null, follow_up_topic:g("s_topic")||null, first_touched_at:today(), last_action_date:today() }
       : { ...base, source:"Counter" };
     S.busy=true; render();
     try{
-      await sbPost("cp_requests",payload);
-      logActivity("submit",(field?"logged a field call: ":"submitted a request: ")+base.customer_name); toast(field?"Field call logged — it's in your pipeline.":"Request submitted — sales can see it now.");
-      if(field){ S.tab="sales"; S.scope="mine"; } else { S.tab="mine"; }
+      const res=await sbPost("cp_requests",payload);
+      // A field/tech call IS a touch — log it so the timeline and the time report both see it.
+      // A lead is not: nothing happened yet, so no touch and no time.
+      if(field && !lead){
+        const row=Array.isArray(res)?res[0]:res;
+        const mins=Number(document.getElementById("s_mins").value);
+        if(row&&row.id){
+          try{ await sbPost("cp_updates",{ request_id:row.id, update_date:today(), contact_type:payload.suggested_action,
+            status:payload.status, note:payload.reason, author:S.persona.name, minutes:(mins>0?mins:null),
+            follow_up_topic:payload.follow_up_topic||null }); }catch(_){}
+          // Handing it to someone else is a real event — make it visible to them and to the board.
+          if(handedOff){
+            try{ await sbPost("cp_updates",{ request_id:row.id, update_date:today(),
+              note:(owner==="Unassigned"?"Left unassigned":"Assigned to "+owner)+" · "+S.persona.name,
+              author:S.persona.name,
+              public_summary:(owner==="Unassigned"?null:"Assigned to "+owner+" — they'll be following up.") }); }catch(_){}
+            logActivity("assign","assigned "+base.customer_name+" to "+owner);
+          }
+        }
+      }
+      logActivity("submit",(lead?"raised a lead for "+owner+": ":field?(isTechPersona?"logged a tech contact: ":"logged a field call: "):"submitted a request: ")+base.customer_name);
+      toast(lead?(owner+" has it — it's on their board now."):field?(handedOff?("Logged — "+owner+" has it now."):(isTechPersona?"Tech contact logged — it's in your pipeline.":"Field call logged — it's in your pipeline.")):"Request submitted — sales can see it now.");
+      if(lead){ S.tab="sales"; S.scope="everyone"; } else if(field){ S.tab="sales"; S.scope=handedOff?"everyone":"mine"; } else { S.tab="mine"; }
       S.busy=false; await load();
     }catch(e){ toast(field?"Couldn't log the call. Try again.":"Submit failed. Try again.",false); S.busy=false; render(); }
   };
@@ -1651,7 +2572,7 @@ function bind() {
     const row={ customer_name:customer, account_number:g("r_account")||null, contact_name:g("r_contact")||null, phone:g("r_phone")||null, address1:g("r_addr1")||null, address2:g("r_addr2")||null, city:g("r_city")||null, state:g("r_state")||null, zip:g("r_zip")||null,
       branch:document.getElementById("r_branch").value, assigned_to:document.getElementById("r_assigned").value,
       cadence_value:Number(document.getElementById("r_cadval").value)||4, cadence_unit:document.getElementById("r_cadunit").value,
-      next_due:first, note:note, active:true, created_by:S.persona.name };
+      next_due:first, note:note, active:true, created_by:S.persona.name, type:S.persona.type==="tech"?"tech":"sales" };
     S.busy=true; render();
     try{
       const res=await sbPost("cp_recurring",row);
@@ -1669,7 +2590,7 @@ function bind() {
     if(!customer||!reason){ toast("Project name and what you're monitoring are required.",false); return; }
     const payload={ submitted_by:S.persona.name, customer_name:customer, account_number:g("p_account")||null, contact_name:g("p_contact")||null, phone:g("p_phone")||null, address1:g("p_addr1")||null, address2:g("p_addr2")||null, city:g("p_city")||null, state:g("p_state")||null, zip:g("p_zip")||null,
       branch:document.getElementById("p_branch").value, suggested_action:"Visit", category:"Large job / project", urgency:"Medium", reason:reason,
-      source:"Project", assigned_to:assigned, status:(assigned&&assigned!=="Unassigned")?"Assigned":"New",
+      source:"Project", assigned_to:assigned, status:(assigned&&assigned!=="Unassigned")?"Assigned":"New", type:S.persona.type==="tech"?"tech":"sales",
       next_follow_up:document.getElementById("p_next").value||null, first_touched_at:null, last_action_date:today() };
     S.busy=true; render();
     try{ await sbPost("cp_requests",payload); logActivity("submit","created a project: "+customer); toast("Project created — it's on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
@@ -1682,7 +2603,8 @@ function bind() {
     const gv=id=>document.getElementById(id).value.trim();
     const nv=id=>Number(document.getElementById(id).value)||0;
     const type=document.getElementById("u_type").value;
-    const status=TOUCH_MAP[type]||r.status;
+    const status=touchMapFor(r)[type]||r.status;
+    const mins=Number(document.getElementById("u_mins").value)||null;
     const note=gv("u_note");
     const next=document.getElementById("u_next").value||null;
     const pub=gv("u_public");
@@ -1694,7 +2616,7 @@ function bind() {
     S.busy=true; render();
     try{
       // 1. append the touch (never overwrites earlier ones)
-      await sbPost("cp_updates",{ request_id:r.id, update_date:today(), contact_type:type, status, note:note||null, author:S.persona.name,
+      await sbPost("cp_updates",{ request_id:r.id, update_date:today(), contact_type:type, status, note:note||null, author:S.persona.name, minutes:mins,
         products_discussed:products, follow_up_topic:topic, quote_number:quoteno, quoted_value:quoted, order_number:orderno, ordered_value:ordered, public_summary:pub||null });
       // 2. update the lead's current snapshot (ownership is set separately, at the lead level)
       await sbPatch("cp_requests","id=eq."+r.id,{ status, next_follow_up:next,
@@ -1704,7 +2626,8 @@ function bind() {
   };
 }
 
-load().then(()=>{
+["dragover","drop"].forEach(ev=>window.addEventListener(ev,e=>{ e.preventDefault(); }));
+load({full:true}).then(()=>{
   try{ if(localStorage.getItem('cp_seen_version')!==APP_VERSION){ S.showChangelog=true; render(); } }catch(e){}
 });
 </script>
