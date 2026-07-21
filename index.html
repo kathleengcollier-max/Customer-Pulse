@@ -309,6 +309,7 @@ async function sbGetAll(table, extra){
   return all;
 }
 function logActivity(event, detail){
+  if(typeof isPreviewing==="function" && isPreviewing()) return; // don't log actions taken while previewing
   try{ sbPost("cp_activity",{ actor:(S.persona&&S.persona.name)||"?", actor_role:(S.persona&&S.persona.type)||"?", event, detail:detail||null }).catch(()=>{}); }catch(_){}
 }
 const sbPost = async (t, b) => { const r = await fetch(SB_URL + "/" + t, { method:"POST", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
@@ -318,6 +319,10 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.8", date:"2026-07-16", title:"Preview anyone's view", items:[
+    "Admins can preview exactly what any person sees — pick them from the “Preview as…” menu up top",
+    "It's read-only and clearly banner-marked, so you can look without changing anything or acting as them",
+    "“Back to my view” returns you to your own admin screen anytime" ]},
   { v:"3.7", date:"2026-07-16", title:"Your own attention snapshot", items:[
     "The Sales Dashboard now shows four at-a-glance boxes for your own work: Due today, Overdue, Aging 5+ days, and No follow-up date",
     "Tap any box to drill into just those cards — the same quick view managers have, scoped to you",
@@ -483,7 +488,11 @@ const STATUS_STYLE = {
 };
 const ROLE_LABEL = { employee:"Counter", sales:"Salesperson", tech:"Tech Support", manager:"Manager", admin:"Admin", viewer:"View only" };
 const ROLES = ["employee","sales","tech","manager","admin","viewer"];
-const readOnly = () => S.persona.type==="viewer";
+// The person you truly are is realPersona; persona is the view you're looking through.
+// They're the same until an admin previews someone else's view.
+const realPersona = () => S.realPersona || S.persona;
+const isPreviewing = () => !!S.realPersona && S.realPersona.id!==S.persona.id;
+const readOnly = () => S.persona.type==="viewer" || isPreviewing();
 // A manager directs work ("Manager lead"); a rep hands it across ("Referral").
 const leadSourceOf = p => ["manager","admin"].includes(p.type) ? "Manager lead" : "Referral";
 // Used only until the people table loads (or if it's ever empty).
@@ -613,9 +622,12 @@ async function load(opts) {
     if(ref){
       const [customers, manufacturers, people, ideas] = await ref;
       S.customers = customers; S.manufacturers = manufacturers; S.people = people; S.ideas = ideas;
-      // Keep the signed-in persona pointed at their current cp_people row (role/name may have changed).
-      if(S.persona){ const me=(people||[]).find(x=>String(x.id)===String(S.persona.id) || (S.authEmail&&(x.email||"").toLowerCase()===S.authEmail.toLowerCase()));
-        if(me) S.persona={ id:me.id, name:me.name, role:ROLE_LABEL[me.role]||me.role, type:me.role }; }
+      // Keep the signed-in person pointed at their current cp_people row (role/name may have changed).
+      // During preview, that's realPersona — don't disturb the view being previewed.
+      const target = S.realPersona || S.persona;
+      if(target){ const me=(people||[]).find(x=>String(x.id)===String(target.id) || (S.authEmail&&(x.email||"").toLowerCase()===S.authEmail.toLowerCase()));
+        if(me){ const fresh={ id:me.id, name:me.name, role:ROLE_LABEL[me.role]||me.role, type:me.role };
+          if(S.realPersona) S.realPersona=fresh; else S.persona=fresh; } }
     }
     if(act) S.activity = await act;
     await spawnDueVisits();
@@ -1141,6 +1153,10 @@ function render() {
           <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button><button class="verpill" data-idea title="Got an idea, or found something broken?" style="margin-left:6px">💡 Idea</button></div></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
+          ${realPersona().type==="admin" ? `<select class="sortsel" data-previewas title="Preview another person's view" style="max-width:150px">
+            <option value="">Preview as…</option>
+            ${personaList().filter(x=>x.id!==realPersona().id).map(x=>`<option value="${x.id}" ${isPreviewing()&&S.persona.id===x.id?"selected":""}>${esc(x.name)} (${esc(x.role)})</option>`).join("")}
+          </select>` : ""}
           <div style="text-align:right;line-height:1.2">
             <div style="font-size:13px;font-weight:600;color:#e2e8f0">${esc(p.name)}</div>
             <div style="font-size:11px;color:#94a3b8">${esc(p.role)}</div>
@@ -1153,7 +1169,11 @@ function render() {
         ${tabs.map(t=>`<button data-tab="${t.id}" class="${t.id===S.tab?"active":""}">${t.icon}${t.label}</button>`).join("")}
       </div></div>
     </header>
-    <main><div class="wrap">${body}</div></main>
+    <main><div class="wrap">${isPreviewing()?`<div style="display:flex;align-items:center;gap:10px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:16px">
+      <span style="color:#b45309;display:inline-flex;flex:none">${I.warn}</span>
+      <span class="tiny" style="color:#92400e"><b>Previewing as ${esc(p.name)} (${esc(p.role)}).</b> This is exactly what they see — read-only, nothing you do here is saved.</span>
+      <button class="qbtn" data-endpreview style="margin-left:auto;white-space:nowrap">Back to my view</button>
+    </div>`:""}${body}</div></main>
     ${S.showChangelog?changelogModal():""}
     ${S.showIdea?ideaModal():""}`;
   bind();
@@ -2621,6 +2641,19 @@ function viewManager() {
 
 // ---- Events -----------------------------------------------------------
 function bind() {
+  const pv=document.querySelector("[data-previewas]");
+  if(pv) pv.onchange=()=>{
+    const id=pv.value;
+    if(!S.realPersona) S.realPersona=S.persona; // remember who I really am, once
+    if(!id){ S.persona=S.realPersona; S.realPersona=null; }
+    else { const target=personaList().find(x=>String(x.id)===id); if(target){ S.persona=target; } }
+    // Land somewhere they can actually see, and reset view state so nothing leaks across.
+    S.tab = S.persona.type==="viewer"?"sales":S.persona.type==="employee"?"submit":"submit";
+    S.selectedId=null; S.special=null; S.search=""; S.scope=isFieldLevel(S.persona)?"mine":"everyone"; S.salesView="cards";
+    render();
+  };
+  const ep=document.querySelector("[data-endpreview]");
+  if(ep) ep.onclick=()=>{ if(S.realPersona){ S.persona=S.realPersona; S.realPersona=null; S.tab="admin"; S.selectedId=null; S.special=null; S.search=""; render(); } };
   const signoutBtn=document.querySelector("[data-signout]"); if(signoutBtn) signoutBtn.onclick=()=>{ if(confirm("Sign out of Customer Pulse?")) signOut(); };
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
   const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
