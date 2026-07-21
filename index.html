@@ -307,6 +307,10 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.3", date:"2026-07-16", title:"Two calendars in one", items:[
+    "The calendar now toggles between Follow-ups (what's coming up) and Activity (what actually happened)",
+    "Activity mode plots every logged touch by the day it happened, with time totals per day — a real \u201cwhat did we do\u201d view",
+    "Both modes filter by person; activity mode also splits sales vs tech" ]},
   { v:"3.2", date:"2026-07-16", title:"Person filters & the follow-up safety net", items:[
     "Every report can now be filtered by person, not just date — see one salesperson or the whole team",
     "New warning when open cards have no follow-up date — they used to quietly vanish from the calendar and overdue list",
@@ -1552,13 +1556,102 @@ function viewCalendar(){
   const now=new Date();
   if(S.calY==null){ S.calY=now.getFullYear(); S.calM=now.getMonth(); }
   const view=S.calView||"month";
+  const mode=S.calMode||"followup"; // followup = scheduled next steps; activity = what actually happened
   const st=S.calStatus||"open";
   const person=S.calPerson||"Everyone";
-  const passes=r=>{ const open=OPEN_STATUSES.includes(r.status); if(st==="open"&&!open)return false; if(st==="completed"&&open)return false; if(person!=="Everyone"&&r.assigned_to!==person)return false; return true; };
-  const statusSeg=[["open","Open"],["completed","Completed"],["all","All"]].map(([k,l])=>`<button data-calstatus="${k}" class="${st===k?'active':''}">${l}</button>`).join("");
   const people=["Everyone",...salespeopleList().filter(p=>p!=="Unassigned"),"Unassigned"];
   const personSel=`<select class="sortsel" data-calperson>${people.map(p=>`<option ${p===person?'selected':''}>${esc(p)}</option>`).join("")}</select>`;
   const viewSeg=`<div class="modeseg"><button data-calview="month" class="${view==='month'?'active':''}">Month</button><button data-calview="day" class="${view==='day'?'active':''}">Day</button></div>`;
+  const modeSeg=`<div class="modeseg"><button data-calmode="followup" class="${mode==='followup'?'active':''}">Follow-ups</button><button data-calmode="activity" class="${mode==='activity'?'active':''}">Activity</button></div>`;
+
+  // --- ACTIVITY MODE: plot touches by the day they were logged ---
+  if(mode==="activity"){
+    const byId={}; S.rows.forEach(r=>byId[r.id]=r);
+    const tf=S.typeFilter||"all";
+    const touchPasses=u=>{
+      const r=byId[u.request_id]; if(!r) return false;
+      if(person!=="Everyone" && (u.author||"")!==person) return false;
+      if(tf==="sales" && isTech(r)) return false;
+      if(tf==="tech" && !isTech(r)) return false;
+      return true;
+    };
+    const touchDay=u=>String(u.update_date||u.created_at||"").slice(0,10);
+    const acts=S.updates.filter(touchPasses);
+    const typeSeg=[["all","All"],["sales","Sales"],["tech","Tech"]].map(([k,l])=>`<button data-typefilter="${k}" class="${tf===k?'active':''}">${l}</button>`).join("");
+    const controls=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${viewSeg}<div class="modeseg">${typeSeg}</div>${personSel}</div>`;
+    const actLabel=u=>{ const r=byId[u.request_id]; const who=u.author||"?"; const what=u.contact_type||u.note||(u.status?u.status:"touch"); const mins=u.minutes?" · "+u.minutes+"m":""; return {r,who,what,mins}; };
+
+    if(view==="day"){
+      if(!S.calDay) S.calDay=today();
+      const dayActs=acts.filter(u=>touchDay(u)===S.calDay).sort((a,b)=>String(a.created_at||"")<String(b.created_at||"")?-1:1);
+      const label=new Date(S.calDay+"T00:00:00").toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      const totalMins=dayActs.reduce((s,u)=>s+(Number(u.minutes)||0),0);
+      const nav=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="qbtn" data-daynav="prev">‹ Prev</button>
+        <div style="font-weight:700;font-size:16px;min-width:200px;text-align:center">${label}</div>
+        <button class="qbtn" data-daynav="next">Next ›</button>
+        <button class="linkish" data-daynav="today" style="margin-left:4px">Today</button>
+      </div>`;
+      const listHtml = dayActs.length ? `<div class="stack">${dayActs.map(u=>{ const {r,who,what,mins}=actLabel(u); return `
+        <button class="dayrow" data-open="${u.request_id}">
+          <span class="cdot" style="background:${r&&isTech(r)?'#ea580c':'#2563eb'}"></span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${esc((r&&r.customer_name)||'(unknown)')} ${r?techBadge(r):''}</div>
+            <div class="tiny muted" style="margin-top:3px">${esc(who)} · ${esc(what)}${u.minutes?' · '+u.minutes+' min':''}</div>
+            ${u.note?`<div class="tiny" style="color:#475569;margin-top:3px">${esc(u.note)}</div>`:""}
+          </div>
+        </button>`;}).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:20px 0">No activity logged on this day in this filter.</div>`;
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">${modeSeg}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        ${nav}
+        ${controls}
+      </div>
+      <div class="tiny muted" style="margin-bottom:10px">${dayActs.length} touch${dayActs.length===1?'':'es'} logged this day${totalMins?` · ${(totalMins/60).toFixed(1)}h total`:''}.</div>
+      ${listHtml}`;
+    }
+
+    const y=S.calY, m=S.calM;
+    const byDay={};
+    acts.forEach(u=>{ const d=touchDay(u); if(!d) return; const dt=new Date(d+"T00:00:00"); if(dt.getFullYear()===y&&dt.getMonth()===m){ const day=dt.getDate(); (byDay[day]=byDay[day]||[]).push(u); } });
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    const startDow=new Date(y,m,1).getDay();
+    const monthName=new Date(y,m,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    const todayStr=today();
+    const dows=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    let cells="";
+    for(let i=0;i<startDow;i++) cells+=`<div class="calcell out"></div>`;
+    for(let day=1;day<=daysInMonth;day++){
+      const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const items=(byDay[day]||[]);
+      const mins=items.reduce((s,u)=>s+(Number(u.minutes)||0),0);
+      const chips=items.slice(0,3).map(u=>{ const r=byId[u.request_id]; return `<button class="calchip" data-open="${u.request_id}"><span class="cdot" style="background:${r&&isTech(r)?'#ea580c':'#2563eb'}"></span><span class="nm">${esc((r&&r.customer_name)||'?')}</span></button>`;}).join("");
+      const more=items.length>3?`<button class="linkish" data-calday="${iso}" style="font-size:11px;padding-left:2px">+${items.length-3} more</button>`:"";
+      const badge=items.length?`<span style="font-size:10px;font-weight:700;color:#64748b">${items.length}${mins?` · ${Math.round(mins/60*10)/10}h`:''}</span>`:"";
+      cells+=`<div class="calcell${iso===todayStr?' today':''}"><div style="display:flex;justify-content:space-between;align-items:center"><button class="caldaynum" data-calday="${iso}" title="Open day view">${day}</button>${badge}</div>${chips}${more}</div>`;
+    }
+    const total=acts.filter(u=>{const dt=new Date(touchDay(u)+"T00:00:00");return dt.getFullYear()===y&&dt.getMonth()===m;}).length;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">${modeSeg}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="qbtn" data-calnav="prev">‹ Prev</button>
+        <div style="font-weight:700;font-size:16px;min-width:150px;text-align:center">${monthName}</div>
+        <button class="qbtn" data-calnav="next">Next ›</button>
+        <button class="linkish" data-calnav="today" style="margin-left:4px">Today</button>
+      </div>
+      ${controls}
+    </div>
+    <div class="tiny muted" style="margin-bottom:10px">${total} touch${total===1?'':'es'} logged this month — what actually happened, by the day it was logged. <span style="color:#2563eb;font-weight:600">Blue = sales</span>, <span style="color:#ea580c;font-weight:600">orange = tech</span>. Tap a day for detail.</div>
+    <div class="calwrap"><div class="calgrid">
+      ${dows.map(d=>`<div class="caldow">${d}</div>`).join("")}
+      ${cells}
+    </div></div>`;
+  }
+
+  // --- FOLLOW-UP MODE (original): plot cards by their scheduled date ---
+  const passes=r=>{ const open=OPEN_STATUSES.includes(r.status); if(st==="open"&&!open)return false; if(st==="completed"&&open)return false; if(person!=="Everyone"&&r.assigned_to!==person)return false; return true; };
+  const statusSeg=[["open","Open"],["completed","Completed"],["all","All"]].map(([k,l])=>`<button data-calstatus="${k}" class="${st===k?'active':''}">${l}</button>`).join("");
   const controls=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${viewSeg}<div class="modeseg">${statusSeg}</div>${personSel}</div>`;
 
   if(view==="day"){
@@ -1581,6 +1674,7 @@ function viewCalendar(){
         </div>
       </button>`).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:20px 0">Nothing scheduled for this day in this filter.</div>`;
     return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">${modeSeg}</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
       ${nav}
       ${controls}
@@ -1612,6 +1706,7 @@ function viewCalendar(){
   }
   const total=Object.values(byDay).reduce((s,a)=>s+a.length,0);
   return `
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">${modeSeg}</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <button class="qbtn" data-calnav="prev">‹ Prev</button>
@@ -2631,6 +2726,7 @@ function bind() {
   });
   document.querySelectorAll("[data-calstatus]").forEach(b=>b.onclick=()=>{ S.calStatus=b.dataset.calstatus; render(); });
   document.querySelectorAll("[data-calview]").forEach(b=>b.onclick=()=>{ S.calView=b.dataset.calview; render(); });
+  document.querySelectorAll("[data-calmode]").forEach(b=>b.onclick=()=>{ S.calMode=b.dataset.calmode; render(); });
   document.querySelectorAll("[data-calday]").forEach(b=>b.onclick=()=>{ S.calDay=b.dataset.calday; S.calView="day"; render(); });
   document.querySelectorAll("[data-daynav]").forEach(b=>b.onclick=()=>{
     if(b.dataset.daynav==="today"){ S.calDay=today(); }
