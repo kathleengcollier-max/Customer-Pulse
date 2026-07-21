@@ -244,8 +244,48 @@
 <script>
 // ---- Live Supabase (PostgREST) ----------------------------------------
 const SB_URL = "https://xfcjxmoqsfcvlskievgx.supabase.co/rest/v1";
+const SB_ORIGIN = "https://xfcjxmoqsfcvlskievgx.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmY2p4bW9xc2Zjdmxza2lldmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjk4NzYsImV4cCI6MjA5ODYwNTg3Nn0.lrZdijIuSOQxZMNFFdm_sjPgvJQFrYj41ihr-FhrU30";
-const H = { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" };
+// Auth: the access token, once someone signs in, rides on every REST call in
+// place of the anon key. That's what lets RLS see who they are when you turn it on.
+let SB_TOKEN = null;
+const authHeader = () => "Bearer " + (SB_TOKEN || SB_KEY);
+const H = { get apikey(){ return SB_KEY; }, get Authorization(){ return authHeader(); }, "Content-Type": "application/json" };
+
+// --- Supabase Auth (email + password), spoken to over plain fetch ---
+const AUTH_URL = SB_ORIGIN + "/auth/v1";
+const authHeaders = { apikey: SB_KEY, "Content-Type": "application/json" };
+async function authSignIn(email, password){
+  const r = await fetch(AUTH_URL + "/token?grant_type=password", { method:"POST", headers:authHeaders, body:JSON.stringify({ email, password }) });
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error_description || data.msg || data.error || "Sign-in failed");
+  return data; // { access_token, refresh_token, user, ... }
+}
+async function authRefresh(refresh_token){
+  const r = await fetch(AUTH_URL + "/token?grant_type=refresh_token", { method:"POST", headers:authHeaders, body:JSON.stringify({ refresh_token }) });
+  if(!r.ok) throw new Error("refresh failed");
+  return r.json();
+}
+async function authUpdatePassword(newPassword){
+  const r = await fetch(AUTH_URL + "/user", { method:"PUT", headers:{...authHeaders, Authorization:"Bearer "+SB_TOKEN}, body:JSON.stringify({ password:newPassword }) });
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error_description || data.msg || "Couldn't update password");
+  return data;
+}
+function saveSession(sess){
+  SB_TOKEN = sess.access_token;
+  try{ localStorage.setItem("cp_session", JSON.stringify({ access_token:sess.access_token, refresh_token:sess.refresh_token, email:(sess.user&&sess.user.email)||S.authEmail })); }catch(_){}
+}
+function clearSession(){
+  SB_TOKEN = null;
+  try{ localStorage.removeItem("cp_session"); }catch(_){}
+}
+async function signOut(){
+  try{ await fetch(AUTH_URL + "/logout", { method:"POST", headers:{...authHeaders, Authorization:"Bearer "+SB_TOKEN} }); }catch(_){}
+  clearSession();
+  S.authed=false; S.authEmail=null; S.persona=null;
+  render();
+}
 const sbGet = async p => { const r = await fetch(SB_URL + "/" + p, { headers: H }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 async function sbGetAll(table, extra){
   const all=[]; const page=1000; let offset=0;
@@ -267,6 +307,11 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.0", date:"2026-07-16", title:"Everyone has their own login", items:[
+    "Sign in with your own email and password — no more tapping a name to switch",
+    "You see exactly your access, and everything you do is logged as really you",
+    "Everything already in Pulse is untouched — your name lines up with all your past work",
+    "Set your own password on first sign-in; tap Sign out any time up in the corner" ]},
   { v:"2.4", date:"2026-07-16", title:"Point someone at something", items:[
     "Managers get a Lead button \u2014 hand work to someone without pretending you made a call. No touch logged, no time recorded.",
     "Juan can refer a technical issue to Whitney, and Whitney can refer a sales opening to Juan, instead of logging a call they didn't make",
@@ -450,7 +495,7 @@ const I = {
 };
 
 // ---- State ------------------------------------------------------------
-const S = { rows:null, updates:[], comments:[], persona:PERSONAS_FALLBACK[0], tab:"submit", selectedId:null, conn:"connecting", filter:"Open", mineFilter:"Open", scope:"mine", subScope:"mine", sort:"newest", search:"", _focus:null, busy:false };
+const S = { rows:null, updates:[], comments:[], persona:null, authed:false, authEmail:null, authBusy:false, authErr:null, tab:"submit", selectedId:null, conn:"connecting", filter:"Open", mineFilter:"Open", scope:"mine", subScope:"mine", sort:"newest", search:"", _focus:null, busy:false };
 
 function addCadence(dateStr, val, unit){
   const d=new Date(dateStr+"T00:00:00"); const n=Number(val)||1;
@@ -532,14 +577,19 @@ async function load(opts) {
     if(ref){
       const [customers, manufacturers, people, ideas] = await ref;
       S.customers = customers; S.manufacturers = manufacturers; S.people = people; S.ideas = ideas;
-      // Fallback personas carry placeholder ids — re-point at the real record by name.
-      const pl = personaList();
-      S.persona = pl.find(x=>x.name===S.persona.name) || pl[0] || S.persona;
+      // Keep the signed-in persona pointed at their current cp_people row (role/name may have changed).
+      if(S.persona){ const me=(people||[]).find(x=>String(x.id)===String(S.persona.id) || (S.authEmail&&(x.email||"").toLowerCase()===S.authEmail.toLowerCase()));
+        if(me) S.persona={ id:me.id, name:me.name, role:ROLE_LABEL[me.role]||me.role, type:me.role }; }
     }
     if(act) S.activity = await act;
     await spawnDueVisits();
     S.lastSync = new Date().toISOString();
-  } catch (e) { S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false); }
+  } catch (e) {
+    if(/JWT|401|expired|token/i.test(e.message||"")){
+      clearSession(); S.authed=false; S.persona=null; S.authErr="Your session expired — please sign in again."; render(); return;
+    }
+    S.conn = "off"; S.rows = S.rows || []; toast("Couldn't reach the database.", false);
+  }
   render();
 }
 function toast(msg, ok=true) {
@@ -926,7 +976,85 @@ function openIdea(){ if(S.showChangelog){ try{ localStorage.setItem("cp_seen_ver
 function openChangelog(){ S.showChangelog=true; render(); }
 function closeIdea(){ S.showIdea=false; S.ideaDraft=null; render(); }
 function closeChangelog(){ S.showChangelog=false; try{ localStorage.setItem('cp_seen_version', APP_VERSION); }catch(e){} render(); }
+function loginScreen(){
+  return `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#0f172a,#1e293b)">
+    <div style="width:100%;max-width:380px">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:14px;background:#7c3aed;margin-bottom:14px">${I.pulse||'<span style="color:#fff;font-size:24px">⚡</span>'}</div>
+        <div style="font-size:22px;font-weight:700;color:#fff">Customer Pulse</div>
+        <div style="font-size:13px;color:#94a3b8;margin-top:2px">Legacy Group · sign in to continue</div>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:24px">
+        ${S.needsPw ? `
+          <div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:4px">Set a new password</div>
+          <div class="tiny muted" style="margin-bottom:16px">You're in as <b>${esc(S.authEmail||"")}</b>. Pick a password you'll remember.</div>
+          <input type="password" id="pw_new" placeholder="New password (8+ characters)" style="width:100%;margin-bottom:10px" autocomplete="new-password"/>
+          <input type="password" id="pw_new2" placeholder="Type it again" style="width:100%;margin-bottom:14px" autocomplete="new-password"/>
+          ${S.authErr?`<div style="font-size:13px;color:#dc2626;margin-bottom:12px">${esc(S.authErr)}</div>`:""}
+          <button class="btn" id="pw_save" ${S.authBusy?'disabled':''} style="width:100%;justify-content:center">${S.authBusy?'Saving…':'Save & continue'}</button>
+          <button class="linkish" id="pw_skip" style="width:100%;text-align:center;margin-top:10px;font-size:12px">Skip for now</button>
+        ` : `
+          <div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:16px">Sign in</div>
+          <input type="email" id="au_email" placeholder="Your work email" value="${esc(S.authEmail||"")}" style="width:100%;margin-bottom:10px" autocomplete="username"/>
+          <input type="password" id="au_pw" placeholder="Password" style="width:100%;margin-bottom:14px" autocomplete="current-password"/>
+          ${S.authErr?`<div style="font-size:13px;color:#dc2626;margin-bottom:12px">${esc(S.authErr)}</div>`:""}
+          <button class="btn" id="au_go" ${S.authBusy?'disabled':''} style="width:100%;justify-content:center">${S.authBusy?'Signing in…':'Sign in'}</button>
+          <div class="tiny muted" style="text-align:center;margin-top:14px">Trouble getting in? Ask Kathleen to check your account.</div>
+        `}
+      </div>
+    </div>
+  </div>`;
+}
+function bindLogin(){
+  const go=document.getElementById("au_go");
+  if(go){
+    const attempt=async()=>{
+      const email=(document.getElementById("au_email").value||"").trim();
+      const pw=document.getElementById("au_pw").value||"";
+      if(!email||!pw){ S.authErr="Enter your email and password."; render(); return; }
+      S.authBusy=true; S.authErr=null; S.authEmail=email; render();
+      try{
+        const sess=await authSignIn(email,pw);
+        saveSession(sess);
+        await afterLogin(email);
+      }catch(e){
+        S.authBusy=false;
+        S.authErr = /invalid/i.test(e.message) ? "That email or password isn't right." : e.message;
+        render();
+      }
+    };
+    go.onclick=attempt;
+    ["au_email","au_pw"].forEach(id=>{ const el=document.getElementById(id); if(el) el.onkeydown=e=>{ if(e.key==="Enter") attempt(); }; });
+  }
+  const save=document.getElementById("pw_save");
+  if(save) save.onclick=async()=>{
+    const a=document.getElementById("pw_new").value||"", b=document.getElementById("pw_new2").value||"";
+    if(a.length<8){ S.authErr="Use at least 8 characters."; render(); return; }
+    if(a!==b){ S.authErr="Those two don't match."; render(); return; }
+    S.authBusy=true; S.authErr=null; render();
+    try{ await authUpdatePassword(a); S.needsPw=false; S.authBusy=false; toast("Password saved."); render(); }
+    catch(e){ S.authBusy=false; S.authErr=e.message; render(); }
+  };
+  const skip=document.getElementById("pw_skip");
+  if(skip) skip.onclick=()=>{ S.needsPw=false; render(); };
+}
+// After a successful sign-in: match the email to a cp_people row → that's the persona.
+async function afterLogin(email){
+  S.authed=true; S.authEmail=email;
+  await load({full:true});
+  const person=(S.people||[]).find(x=>x.active && (x.email||"").toLowerCase()===email.toLowerCase());
+  if(!person){
+    S.authBusy=false; S.authed=false; S.authErr="Signed in, but no matching person is set up for "+email+". Ask Kathleen to add your email on the People card."; clearSession(); render(); return;
+  }
+  S.persona={ id:person.id, name:person.name, role:ROLE_LABEL[person.role]||person.role, type:person.role };
+  S.tab = person.role==="viewer" ? "sales" : person.role==="employee" ? "submit" : "submit";
+  S.scope = isFieldLevel(S.persona) ? "mine" : "everyone";
+  S.authBusy=false;
+  logActivity("session","signed in");
+  render();
+}
 function render() {
+  if(!S.authed || !S.persona){ document.getElementById("root").innerHTML = loginScreen(); bindLogin(); return; }
   const p = S.persona;
   const accent = accentFor(p.type);
   document.documentElement.style.setProperty('--accent', accent);
@@ -962,11 +1090,13 @@ function render() {
           <div><div class="title">Customer Pulse</div>
           <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button><button class="verpill" data-idea title="Got an idea, or found something broken?" style="margin-left:6px">💡 Idea</button></div></div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="view-as">Viewing as</span>
-          <div class="personas">
-            ${personaList().map(x=>{const on=x.id===p.id;return `<button data-persona="${x.id}" class="${on?"active":""}"${on?` style="background:${accentFor(x.type)};color:#fff"`:""}>${x.name}</button>`;}).join("")}
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="text-align:right;line-height:1.2">
+            <div style="font-size:13px;font-weight:600;color:#e2e8f0">${esc(p.name)}</div>
+            <div style="font-size:11px;color:#94a3b8">${esc(p.role)}</div>
           </div>
+          <span style="width:30px;height:30px;border-radius:50%;background:${accentFor(p.type)};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none">${esc((p.name||"?").slice(0,1).toUpperCase())}</span>
+          <button class="verpill" data-signout title="Sign out" style="padding:6px 10px">Sign out</button>
         </div>
       </div>
       <div class="wrap"><div class="tabs">
@@ -2277,7 +2407,7 @@ function viewManager() {
 
 // ---- Events -----------------------------------------------------------
 function bind() {
-  document.querySelectorAll("[data-persona]").forEach(b=>b.onclick=()=>{ S.persona=personaList().find(p=>String(p.id)===b.dataset.persona)||S.persona; S.selectedId=null; S.search=""; S.subScope="mine"; S.scope=isFieldLevel(S.persona)?"mine":"everyone"; S.filter="Open"; S.special=null; if(S.persona.type==="employee"&&!["submit","mine"].includes(S.tab))S.tab="submit"; if(S.persona.type==="viewer"&&["submit","mine"].includes(S.tab))S.tab="sales"; logActivity("session","opened the app"); render(); });
+  const signoutBtn=document.querySelector("[data-signout]"); if(signoutBtn) signoutBtn.onclick=()=>{ if(confirm("Sign out of Customer Pulse?")) signOut(); };
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
   const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
   const qc=document.querySelector("[data-clearsearch]"); if(qc) qc.onclick=()=>{ S.search=""; S._focus="q_search"; render(); };
@@ -2627,9 +2757,25 @@ function bind() {
 }
 
 ["dragover","drop"].forEach(ev=>window.addEventListener(ev,e=>{ e.preventDefault(); }));
-load({full:true}).then(()=>{
-  try{ if(localStorage.getItem('cp_seen_version')!==APP_VERSION){ S.showChangelog=true; render(); } }catch(e){}
-});
+
+// Boot: try to resume a saved session. If it works, go straight in.
+// If not — or if there's no session — show the login screen.
+(async function boot(){
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem("cp_session")||"null"); }catch(_){}
+  if(saved && saved.refresh_token){
+    try{
+      const fresh=await authRefresh(saved.refresh_token);
+      saveSession(fresh);
+      await afterLogin((fresh.user&&fresh.user.email)||saved.email);
+      if(S.authed){
+        try{ if(localStorage.getItem('cp_seen_version')!==APP_VERSION){ S.showChangelog=true; render(); } }catch(e){}
+        return;
+      }
+    }catch(_){ clearSession(); }
+  }
+  render(); // not signed in → login screen
+})();
 </script>
 </body>
 </html>
