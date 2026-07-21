@@ -568,7 +568,7 @@ async function load(opts) {
       safe(sbGet("cp_ideas?select=*&order=created_at.desc"), S.ideas||[]),
     ]) : null;
     // Only the admin ever looks at the activity log — nobody else pays for it.
-    const act = S.persona.type==="admin"
+    const act = (S.persona && S.persona.type==="admin")
       ? safe(sbGet("cp_activity?select=*&order=created_at.desc&limit=500"), S.activity||[])
       : null;
 
@@ -1057,6 +1057,10 @@ async function afterLogin(email){
   S.scope = isFieldLevel(S.persona) ? "mine" : "everyone";
   S.authBusy=false;
   logActivity("session","signed in");
+  // Now that we know who they are, do one clean load — this clears any transient
+  // "offline" from the first pass and fetches admin-only data if they're admin.
+  S.conn="connecting";
+  await load(S.persona.type==="admin"?{full:true}:undefined);
   render();
 }
 function render() {
