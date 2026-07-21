@@ -556,8 +556,8 @@ async function load(opts) {
   const full = !!(opts && opts.full);
   try {
     const core = Promise.all([
-      sbGet("cp_requests?select=*&order=submitted_at.desc"),
-      sbGet("cp_updates?select=*&order=created_at.asc"),
+      safe(sbGet("cp_requests?select=*&order=submitted_at.desc"), S.rows||[]),
+      safe(sbGet("cp_updates?select=*&order=created_at.asc"), S.updates||[]),
       safe(sbGet("cp_comments?select=*&order=created_at.asc"), S.comments||[]),
       safe(sbGet("cp_recurring?select=*&order=next_due.asc"), S.recurring||[]),
     ]);
