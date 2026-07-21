@@ -307,6 +307,9 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.5", date:"2026-07-16", title:"Older visits show on the activity calendar", items:[
+    "Field and tech calls logged before the app recorded a first touch now appear on the Activity calendar on the day they were logged",
+    "So a visit that only lives as the card itself no longer goes missing from the day view" ]},
   { v:"3.4", date:"2026-07-16", title:"Every touch loads now", items:[
     "Fixed: once there were more than 1,000 touches, the newest ones silently stopped loading — so recent activity (and recent touches on cards) could go missing",
     "The app now loads the full history, so the Activity calendar, timelines, and reports all show everything" ]},
@@ -1582,7 +1585,26 @@ function viewCalendar(){
       return true;
     };
     const touchDay=u=>String(u.update_date||u.created_at||"").slice(0,10);
-    const acts=S.updates.filter(touchPasses);
+    let acts=S.updates.filter(touchPasses);
+    // Field/tech cards created before the "first call = a touch" fix have no touch row.
+    // Surface their creation as an activity event, but ONLY when the card has zero touches,
+    // so cards that already got their first touch aren't double-counted.
+    const touchedCards=new Set(S.updates.map(u=>u.request_id));
+    const synthetic=S.rows.filter(r=>{
+      if(touchedCards.has(r.id)) return false;               // already has real touches
+      if(!(r.source==="Field call")) return false;            // only logged visits/calls, not counter requests
+      return true;
+    }).map(r=>({
+      request_id:r.id,
+      author:r.assigned_to||r.submitted_by,
+      update_date:(r.first_touched_at||r.submitted_at||"").slice(0,10),
+      created_at:r.submitted_at,
+      contact_type:isTech(r)?"Tech contact":"Field call",
+      note:r.reason||"",
+      minutes:null,
+      _synthetic:true
+    })).filter(u=>u.update_date);
+    acts=acts.concat(synthetic.filter(touchPasses));
     const typeSeg=[["all","All"],["sales","Sales"],["tech","Tech"]].map(([k,l])=>`<button data-typefilter="${k}" class="${tf===k?'active':''}">${l}</button>`).join("");
     const controls=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${viewSeg}<div class="modeseg">${typeSeg}</div>${personSel}</div>`;
     const actLabel=u=>{ const r=byId[u.request_id]; const who=u.author||"?"; const what=u.contact_type||u.note||(u.status?u.status:"touch"); const mins=u.minutes?" · "+u.minutes+"m":""; return {r,who,what,mins}; };
