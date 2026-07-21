@@ -307,6 +307,9 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.4", date:"2026-07-16", title:"Every touch loads now", items:[
+    "Fixed: once there were more than 1,000 touches, the newest ones silently stopped loading — so recent activity (and recent touches on cards) could go missing",
+    "The app now loads the full history, so the Activity calendar, timelines, and reports all show everything" ]},
   { v:"3.3", date:"2026-07-16", title:"Two calendars in one", items:[
     "The calendar now toggles between Follow-ups (what's coming up) and Activity (what actually happened)",
     "Activity mode plots every logged touch by the day it happened, with time totals per day — a real \u201cwhat did we do\u201d view",
@@ -536,7 +539,7 @@ async function spawnDueVisits(){
       await spawnRecurringCard(s, s.next_due); spawned=true;
     }
     if(spawned){
-      const [reqs,ups]=await Promise.all([ sbGet("cp_requests?select=*&order=submitted_at.desc"), sbGet("cp_updates?select=*&order=created_at.asc") ]);
+      const [reqs,ups]=await Promise.all([ sbGetAll("cp_requests","&order=submitted_at.desc"), sbGetAll("cp_updates","&order=created_at.asc") ]);
       S.rows=reqs; S.updates=ups;
       S.recurring=await sbGet("cp_recurring?select=*&order=next_due.asc");
     }
@@ -567,8 +570,8 @@ async function load(opts) {
   const full = !!(opts && opts.full);
   try {
     const core = Promise.all([
-      safe(sbGet("cp_requests?select=*&order=submitted_at.desc"), S.rows||[]),
-      safe(sbGet("cp_updates?select=*&order=created_at.asc"), S.updates||[]),
+      safe(sbGetAll("cp_requests","&order=submitted_at.desc"), S.rows||[]),
+      safe(sbGetAll("cp_updates","&order=created_at.asc"), S.updates||[]),
       safe(sbGet("cp_comments?select=*&order=created_at.asc"), S.comments||[]),
       safe(sbGet("cp_recurring?select=*&order=next_due.asc"), S.recurring||[]),
     ]);
@@ -1569,10 +1572,13 @@ function viewCalendar(){
     const byId={}; S.rows.forEach(r=>byId[r.id]=r);
     const tf=S.typeFilter||"all";
     const touchPasses=u=>{
-      const r=byId[u.request_id]; if(!r) return false;
+      const r=byId[u.request_id];
       if(person!=="Everyone" && (u.author||"")!==person) return false;
-      if(tf==="sales" && isTech(r)) return false;
-      if(tf==="tech" && !isTech(r)) return false;
+      // Type filter needs the card; if the card's genuinely gone, only exclude when a specific type is requested.
+      if(tf==="sales" && (!r || isTech(r))) return false;
+      if(tf==="tech" && (!r || !isTech(r))) return false;
+      // A touch with no author and no card is noise (e.g. a stray system row) — skip only those.
+      if(!r && !u.author) return false;
       return true;
     };
     const touchDay=u=>String(u.update_date||u.created_at||"").slice(0,10);
