@@ -307,6 +307,10 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.2", date:"2026-07-16", title:"Person filters & the follow-up safety net", items:[
+    "Every report can now be filtered by person, not just date — see one salesperson or the whole team",
+    "New warning when open cards have no follow-up date — they used to quietly vanish from the calendar and overdue list",
+    "Managers get a “No follow-up date” card in Needs Attention; reps get a banner on their dashboard" ]},
   { v:"3.1", date:"2026-07-16", title:"A tidier Manager view", items:[
     "Admin-only tools — People & roles, the customer and manufacturer uploads, and the ideas inbox — moved to their own Admin tab",
     "Manager view is now just the work: the dashboard, summaries, and what needs attention" ]},
@@ -1475,13 +1479,14 @@ function viewSales() {
     ${viewNotes()}`;
   }
   const f = S.filter;
-  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days" };
+  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days", nofollowup:"No follow-up date set" };
   let list;
   if(S.special){
     list = S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
     if(S.special==="unassigned") list=list.filter(r=>r.assigned_to==='Unassigned');
     else if(S.special==="overdue") list=list.filter(r=>r.next_follow_up && r.next_follow_up < today());
     else if(S.special==="aging") list=list.filter(r=>days(r.submitted_at,today())>5);
+    else if(S.special==="nofollowup") list=list.filter(r=>!r.next_follow_up && !isUpcomingVisit(r));
   } else {
     list = S.rows.filter(r => f==="All"?true : f==="Open"?OPEN_STATUSES.includes(r.status) : f==="Closed"?!OPEN_STATUSES.includes(r.status) : r.status===f);
     list = list.filter(inScope);
@@ -1512,7 +1517,18 @@ function viewSales() {
       <button class="qbtn" data-print="1">${I.printer}Print</button>
     </div>
     ${searchBar("Search customer, account, or salesperson…")}
-    ${S.special?`<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;margin-bottom:12px"><span class="tiny" style="font-weight:600;color:#1e40af">Filtered from Manager view: ${SPECIAL[S.special]||S.special} (${list.length})</span><button class="linkish" data-clearspecial style="margin-left:auto">Clear ✕</button></div>`:""}
+    ${(()=>{
+      if(S.special) return "";
+      // Open cards in the current scope with no next step set — the ones that quietly fall through.
+      const stranded=S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status) && !r.next_follow_up && !isUpcomingVisit(r));
+      if(!stranded.length) return "";
+      return `<div style="display:flex;align-items:center;gap:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:12px">
+        <span style="color:#ea580c;display:inline-flex;flex:none">${I.warn}</span>
+        <span class="tiny" style="color:#9a3412"><b>${stranded.length} open ${stranded.length===1?'card has':'cards have'} no follow-up date.</b> Without one they won't surface on the calendar or in overdue — easy to lose.</span>
+        <button class="qbtn" data-special="nofollowup" style="margin-left:auto;white-space:nowrap">Show ${stranded.length===1?'it':'them'}</button>
+      </div>`;
+    })()}
+    ${S.special?`<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;margin-bottom:12px"><span class="tiny" style="font-weight:600;color:#1e40af">Filtered: ${SPECIAL[S.special]||S.special} (${list.length})</span><button class="linkish" data-clearspecial style="margin-left:auto">Clear ✕</button></div>`:""}
     ${stageLegend()}
     ${list.length===0
       ? (S.search
@@ -1874,10 +1890,18 @@ function reportRange(){
   const start=S.trStart||(()=>{ const d=new Date(); d.setDate(d.getDate()-6); return isoLocal(d); })();
   return {start,end};
 }
+function reportPeople(){ return ["Everyone", ...salespeopleList().filter(p=>p!=="Unassigned")]; }
 function rangeControls(extra){
   const {start,end}=reportRange();
+  const mgr = ["manager","admin","viewer"].includes(S.persona.type);
+  const who = mgr ? (S.trWho||"Everyone") : S.persona.name;
+  // Field-level people (Juan, Whitney) only ever see themselves; managers/admin/owner can pick anyone.
+  const peopleSel = mgr
+    ? `<select class="sortsel" data-trwho>${reportPeople().map(p=>`<option ${p===who?"selected":""}>${esc(p)}</option>`).join("")}</select>`
+    : "";
   return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     ${extra||""}
+    ${peopleSel}
     <input type="date" id="tr_start" value="${esc(start)}" class="sortsel" style="width:auto"/>
     <span class="tiny muted">\u2192</span>
     <input type="date" id="tr_end" value="${esc(end)}" class="sortsel" style="width:auto"/>
@@ -1885,8 +1909,16 @@ function rangeControls(extra){
     <button class="qbtn" data-trmonth="1">30 days</button>
   </div>`;
 }
-const cardsInRange = () => { const {start,end}=reportRange(); return S.rows.filter(r=>{ const d=String(r.submitted_at||"").slice(0,10); return d>=start&&d<=end; }); };
-const touchesInRange = () => { const {start,end}=reportRange(); return S.updates.filter(u=>{ const d=String(u.update_date||u.created_at||"").slice(0,10); return d>=start&&d<=end; }); };
+// Who the reports are scoped to right now. Field-level people are always themselves.
+function reportWho(){
+  const mgr = ["manager","admin","viewer"].includes(S.persona.type);
+  return mgr ? (S.trWho||"Everyone") : S.persona.name;
+}
+// A card "belongs" to someone if they're assigned it. A touch belongs to its author.
+const cardPerson = r => r.assigned_to || "Unassigned";
+const touchPerson = u => u.author || "?";
+const cardsInRange = () => { const {start,end}=reportRange(); const who=reportWho(); return S.rows.filter(r=>{ const d=String(r.submitted_at||"").slice(0,10); return d>=start&&d<=end && (who==="Everyone"||cardPerson(r)===who); }); };
+const touchesInRange = () => { const {start,end}=reportRange(); const who=reportWho(); return S.updates.filter(u=>{ const d=String(u.update_date||u.created_at||"").slice(0,10); return d>=start&&d<=end && (who==="Everyone"||touchPerson(u)===who); }); };
 const reportHead = (title, sub, extra) => `<div class="card" style="margin-bottom:16px">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div><h2 style="font-size:16px;font-weight:600;margin:0">${title}</h2>
@@ -2250,26 +2282,6 @@ function viewAdmin(){
     </div>
     <div class="tiny muted" style="margin-bottom:16px">Team &amp; access, the data uploads, and what people have sent in. Admin only.</div>
 ${ideasCard()}
-    <div class="card" style="margin-bottom:20px;border:1px solid #e0f2fe;background:#f9fdff">
-      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#0284c7;display:inline-flex">${I.bldg}</span> People &amp; roles</h2>
-      <div class="tiny muted" style="margin-bottom:12px">Add someone and give them a role — it flows everywhere: who can sign in, what they're assigned, calendar filters, and reports. A <b>Salesperson</b> sees sales reasons; <b>Tech Support</b> sees technical ones.${(S.people||[]).some(x=>x.active&&!x.email)?` <span style="color:#b45309;font-weight:600">Anyone without an email can't sign in — their email must match their login.</span>`:""}</div>
-      ${(S.people||[]).length? `<div style="margin-bottom:4px">${(S.people||[]).map(x=>`
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
-          <span style="width:9px;height:9px;border-radius:50%;background:${x.active?accentFor(x.role):'#cbd5e1'};flex:none"></span>
-          <span style="font-weight:600;color:#334155;flex:1;min-width:80px;${x.active?'':'opacity:.45;text-decoration:line-through'}">${esc(x.name)}</span>
-          <input type="email" data-pemail="${x.id}" value="${esc(x.email||'')}" placeholder="email — for logins" style="flex:1;min-width:150px;padding:5px 8px;font-size:12px;${x.email?'':'border-color:#fed7aa;background:#fffbf6'}" ${S.busy?'disabled':''}/>
-          <select class="sortsel" data-prole="${x.id}" ${S.busy?'disabled':''}>${ROLES.map(r=>`<option value="${r}" ${x.role===r?'selected':''}>${esc(ROLE_LABEL[r])}</option>`).join("")}</select>
-          <button class="linkish" data-pactive="${x.id}" ${S.busy?'disabled':''}>${x.active?'Deactivate':'Activate'}</button>
-          <button class="linkish" data-premove="${x.id}" style="color:#dc2626" ${S.busy?'disabled':''}>Remove</button>
-        </div>`).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:8px 0">No people loaded — the app is using its built-in list. Run the people SQL, then hit Refresh.</div>`}
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <input id="np_name" placeholder="New person's name" style="flex:1;min-width:130px"/>
-        <input id="np_email" type="email" placeholder="Email (optional for now)" style="flex:1;min-width:150px"/>
-        <select id="np_role" class="sortsel">${ROLES.map(r=>`<option value="${r}" ${r==="sales"?"selected":""}>${esc(ROLE_LABEL[r])}</option>`).join("")}</select>
-        <button class="btn" id="np_add" ${S.busy?'disabled':''} style="background:#0284c7">${I.plus} Add person</button>
-      </div>
-      <div class="tiny muted" style="margin-top:8px">Deactivating hides someone from the app but keeps their history. Removing is permanent — cards they own keep their name.</div>
-    </div>
     <div class="card" style="margin-bottom:20px;border:1px solid #ede9fe;background:#faf9ff">
       <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#7c3aed;display:inline-flex">${I.clip}</span> Customer list</h2>
       <div class="tiny muted" style="margin-bottom:12px">${(S.customers||[]).length} customer${(S.customers||[]).length===1?'':'s'} loaded for autocomplete. Upload a CSV — Name, Account #, Address 1, Address 2, City, State, Zip, Phone — to replace the whole list.</div>
@@ -2299,6 +2311,26 @@ ${ideasCard()}
         ${S.pendingMfr?`<button class="btn-ghost" id="mfr_clear" ${S.busy?'disabled':''}>Cancel</button>`:''}
       </div>
       <div class="tiny muted" style="margin-top:8px">Duplicates are dropped automatically. Replacing swaps the entire list.</div>
+    </div>
+    <div class="card" style="margin-bottom:20px;border:1px solid #e0f2fe;background:#f9fdff">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#0284c7;display:inline-flex">${I.bldg}</span> People &amp; roles</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Add someone and give them a role — it flows everywhere: who can sign in, what they're assigned, calendar filters, and reports. A <b>Salesperson</b> sees sales reasons; <b>Tech Support</b> sees technical ones.${(S.people||[]).some(x=>x.active&&!x.email)?` <span style="color:#b45309;font-weight:600">Anyone without an email can't sign in — their email must match their login.</span>`:""}</div>
+      ${(S.people||[]).length? `<div style="margin-bottom:4px">${(S.people||[]).map(x=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+          <span style="width:9px;height:9px;border-radius:50%;background:${x.active?accentFor(x.role):'#cbd5e1'};flex:none"></span>
+          <span style="font-weight:600;color:#334155;flex:1;min-width:80px;${x.active?'':'opacity:.45;text-decoration:line-through'}">${esc(x.name)}</span>
+          <input type="email" data-pemail="${x.id}" value="${esc(x.email||'')}" placeholder="email — for logins" style="flex:1;min-width:150px;padding:5px 8px;font-size:12px;${x.email?'':'border-color:#fed7aa;background:#fffbf6'}" ${S.busy?'disabled':''}/>
+          <select class="sortsel" data-prole="${x.id}" ${S.busy?'disabled':''}>${ROLES.map(r=>`<option value="${r}" ${x.role===r?'selected':''}>${esc(ROLE_LABEL[r])}</option>`).join("")}</select>
+          <button class="linkish" data-pactive="${x.id}" ${S.busy?'disabled':''}>${x.active?'Deactivate':'Activate'}</button>
+          <button class="linkish" data-premove="${x.id}" style="color:#dc2626" ${S.busy?'disabled':''}>Remove</button>
+        </div>`).join("")}</div>` : `<div class="tiny muted" style="font-style:italic;padding:8px 0">No people loaded — the app is using its built-in list. Run the people SQL, then hit Refresh.</div>`}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="np_name" placeholder="New person's name" style="flex:1;min-width:130px"/>
+        <input id="np_email" type="email" placeholder="Email (optional for now)" style="flex:1;min-width:150px"/>
+        <select id="np_role" class="sortsel">${ROLES.map(r=>`<option value="${r}" ${r==="sales"?"selected":""}>${esc(ROLE_LABEL[r])}</option>`).join("")}</select>
+        <button class="btn" id="np_add" ${S.busy?'disabled':''} style="background:#0284c7">${I.plus} Add person</button>
+      </div>
+      <div class="tiny muted" style="margin-top:8px">Deactivating hides someone from the app but keeps their history. Removing is permanent — cards they own keep their name.</div>
     </div>`;
 }
 function viewManager() {
@@ -2317,10 +2349,11 @@ function viewManager() {
   const unassigned = open.filter(r=>r.assigned_to==='Unassigned').length;
   const overdue = open.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
   const aging5 = open.filter(r=>days(r.submitted_at,today())>5).length;
+  const nofollow = open.filter(r=>!r.next_follow_up && !isUpcomingVisit(r)).length;
   const attn=(n,label,sub,jump)=>{const good=n===0;return good
     ? `<div class="attncard ok"><div class="an">${n}</div><div class="al">${label}</div><div class="as">all clear</div></div>`
     : `<div class="attncard bad" data-mgr-jump="${jump}" style="cursor:pointer"><div class="an">${n}</div><div class="al">${label}</div><div class="as">${sub}</div><div class="tiny" style="margin-top:6px;font-weight:600;opacity:.85">View →</div></div>`;};
-  const allClear = unassigned===0 && overdue===0 && aging5===0;
+  const allClear = unassigned===0 && overdue===0 && aging5===0 && nofollow===0;
   const quotedTotal = S.updates.reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
   const orderedTotal = S.updates.reduce((s,u)=>s+(Number(u.ordered_value)||0),0);
   const hitRate = quotedTotal>0 ? Math.round(orderedTotal/quotedTotal*100)+"%" : "—";
@@ -2342,6 +2375,7 @@ function viewManager() {
       ${attn(unassigned,"Unassigned","nobody owns these yet","unassigned")}
       ${attn(overdue,"Overdue follow-ups","the promised date has passed","overdue")}
       ${attn(aging5,"Aging 5+ days","open and sitting too long","aging")}
+      ${attn(nofollow,"No follow-up date","open with no next step set","nofollowup")}
     </div>
     <div class="stats" style="margin-bottom:20px">
       ${stat("Total submitted",rows.length)}
@@ -2641,6 +2675,7 @@ function bind() {
   }
   document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.scroll); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); });
   document.querySelectorAll("[data-mgr-jump]").forEach(b=>b.onclick=()=>{ S.special=b.dataset.mgrJump; S.tab="sales"; S.selectedId=null; S.scope="everyone"; render(); });
+  document.querySelectorAll("[data-special]").forEach(b=>b.onclick=()=>{ S.special=b.dataset.special; S.tab="sales"; render(); });
   const cs=document.querySelector("[data-clearspecial]"); if(cs) cs.onclick=()=>{ S.special=null; render(); };
   document.querySelectorAll("[data-recur-off]").forEach(b=>b.onclick=async()=>{
     const s=(S.recurring||[]).find(x=>x.id===b.dataset.recurOff); if(!s) return;
