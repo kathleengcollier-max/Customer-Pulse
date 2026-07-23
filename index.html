@@ -1047,7 +1047,8 @@ function loginScreen(){
           <input type="password" id="au_pw" placeholder="Password" style="width:100%;margin-bottom:14px" autocomplete="current-password"/>
           ${S.authErr?`<div style="font-size:13px;color:#dc2626;margin-bottom:12px">${esc(S.authErr)}</div>`:""}
           <button class="btn" id="au_go" ${S.authBusy?'disabled':''} style="width:100%;justify-content:center">${S.authBusy?'Signing in…':'Sign in'}</button>
-          <div class="tiny muted" style="text-align:center;margin-top:14px">Trouble getting in? Ask Kathleen to check your account.</div>
+          <div class="tiny muted" style="text-align:center;margin-top:14px"><a href="/reset-password.html" style="color:var(--accent);font-weight:600;text-decoration:none">Forgot your password?</a></div>
+          <div class="tiny muted" style="text-align:center;margin-top:6px">Still stuck? Ask Kathleen to check your account.</div>
         `}
       </div>
     </div>
@@ -3010,6 +3011,20 @@ function bind() {
 // Boot: try to resume a saved session. If it works, go straight in.
 // If not — or if there's no session — show the login screen.
 (async function boot(){
+  // A password-recovery link can land here rather than on the reset page —
+  // anything sent from the Supabase dashboard goes to Site URL, which is this app.
+  // Hand it straight over with the token intact, before we resume any session,
+  // or we'd silently sign them in and swallow the reset.
+  try{
+    const rh = new URLSearchParams((location.hash||"").replace(/^#/,""));
+    const rq = new URLSearchParams(location.search||"");
+    const isRecovery = rh.get("type")==="recovery" || rq.get("type")==="recovery"
+                    || (rh.get("error_code")||"").indexOf("otp")===0;
+    if(isRecovery){
+      location.replace("/reset-password.html" + location.search + location.hash);
+      return;
+    }
+  }catch(_){}
   let saved=null;
   try{ saved=JSON.parse(localStorage.getItem("cp_session")||"null"); }catch(_){}
   if(saved && saved.refresh_token){
