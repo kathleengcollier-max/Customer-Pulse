@@ -317,6 +317,13 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.17", date:"2026-07-26", title:"Polish across the board", items:[
+    "Customer categories now show their full name everywhere (MF reads MultiFamily), and the badge sits in the card's top-right corner",
+    "Set or change a follow-up date right on the card \u2014 pick a date or tap a chip and it saves instantly, no need to open Log a touch",
+    "Admins can now fix a touch's type too (say, Visit \u2192 Call), alongside the note, summary, and time",
+    "Ideas you finish get a \u201Cshipped v#\u201D tag and tuck into a Done \u00b7 archived section, so the active list stays tidy",
+    "The upload screen now names the exact reports to use \u2014 ARW All Customers and ARW Inventory Vendors",
+    "The new-work banner is bolder and harder to miss \u2014 and the browser tab finally has an icon" ] },
   { v:"3.16", date:"2026-07-25", title:"The user guide is a tap away", items:[
     "A new 📘 Guide link in the header opens the full user guide (PDF) — how every part of Pulse works, role by role",
     "It's on the sign-in screen too, so new folks can read up before their first login" ] },
