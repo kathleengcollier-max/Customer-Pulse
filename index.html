@@ -1094,6 +1094,7 @@ function ideaModal(){
           <div class="tiny" style="font-weight:700;color:#334155;margin-bottom:8px">What you've sent so far</div>
           ${mine.slice(0,6).map(i=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0">
             <span class="pill" style="${IDEA_STYLE[i.status]||''};flex:none">${esc(i.status)}</span>
+            ${i.status==="Done"&&i.done_version?`<span style="font-size:11px;font-weight:700;color:#166534;background:#dcfce7;padding:1px 7px;border-radius:999px;flex:none;white-space:nowrap" title="The version this shipped in">shipped v${esc(i.done_version)}</span>`:""}
             <span style="font-size:13px;color:#475569;min-width:0">${esc(i.body.length>90?i.body.slice(0,90)+"\u2026":i.body)}</span>
           </div>`).join("")}
         </div>`:""}
