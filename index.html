@@ -5,6 +5,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Customer Pulse — Legacy Group</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%2232%22%20y2%3D%2232%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23E1263A%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23B10D26%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpath%20d%3D%22M2%2017%20H12%20L15%207%20L19%2026%20L22%2012%20L24%2017%20H30%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2217%22%20r%3D%221.7%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E">
+<link rel="alternate icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
 <style>
   * { box-sizing: border-box; }
   :root { --red:#C8102E; --accent:#C8102E; }
@@ -277,12 +280,6 @@ async function authRefresh(refresh_token){
   if(!r.ok) throw new Error("refresh failed");
   return r.json();
 }
-async function authUpdatePassword(newPassword){
-  const r = await fetch(AUTH_URL + "/user", { method:"PUT", headers:{...authHeaders, Authorization:"Bearer "+SB_TOKEN}, body:JSON.stringify({ password:newPassword }) });
-  const data = await r.json();
-  if(!r.ok) throw new Error(data.error_description || data.msg || "Couldn't update password");
-  return data;
-}
 function saveSession(sess){
   SB_TOKEN = sess.access_token;
   try{ localStorage.setItem("cp_session", JSON.stringify({ access_token:sess.access_token, refresh_token:sess.refresh_token, email:(sess.user&&sess.user.email)||S.authEmail })); }catch(_){}
@@ -319,6 +316,46 @@ const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.16", date:"2026-07-25", title:"The user guide is a tap away", items:[
+    "A new 📘 Guide link in the header opens the full user guide (PDF) — how every part of Pulse works, role by role",
+    "It's on the sign-in screen too, so new folks can read up before their first login" ] },
+  { v:"3.15", date:"2026-07-25", title:"Tip of the week", items:[
+    "A short Tip of the week now pops up when you sign in — a quick spotlight on a feature you might not have found yet",
+    "Just-launched features jump to the front for their first couple of weeks, so nobody misses what's new",
+    "At most once a week, and you can tap Another tip to browse a few more",
+    "Just tap Got it to carry on" ] },
+  { v:"3.14", date:"2026-07-25", title:"Log internal support", items:[
+    "Tech support can now log help given to our own team \u2014 a salesperson, the counter, a branch \u2014 not just external customers",
+    "New \u201CInternal support\u201D option on the submit screen: who you helped, what they needed, and the time it took",
+    "It's tracked as tech work, so internal load shows up in the time and tech reports and carries an \u201CInternal\u201D badge",
+    "Available to tech support, managers, and admins" ],
+    thanks:["Stephen"] },
+  { v:"3.13", date:"2026-07-25", title:"Fix a saved touch", items:[
+    "Admins can now edit a logged touch — tap Edit on any entry in the touch history to fix the note, the public summary, or the time",
+    "Handy for a typo or a wrong minute count without deleting and re-logging",
+    "Everyone else's touches stay exactly as logged — this is admin-only" ] },
+  { v:"3.12", date:"2026-07-25", title:"Know the moment a ticket lands on you", items:[
+    "A banner now appears on every screen when tickets are assigned to you that you haven't worked yet — no need to be on the Sales Dashboard to notice",
+    "Tap View to jump straight to just those tickets",
+    "They clear themselves the moment you act (log a touch or grab it), or you can tap Dismiss",
+    "Dismiss syncs across your devices, so clearing it on your phone clears it on your desktop too" ],
+    thanks:["Whitney","Stephen"] },
+  { v:"3.11", date:"2026-07-25", title:"Tag the contractor on multifamily properties", items:[
+    "Your morning file's customer type (MF and the like) now rides along and shows as a badge on the card",
+    "Pick a multifamily (MF) customer and an optional Contractor field appears — start typing to pull them from your customer file",
+    "It only shows where it belongs: MF tickets, never on a tech's own tech call",
+    "One-time step: re-upload your morning file after this update so everyone's type fills in" ],
+    thanks:["Stephen"] },
+  { v:"3.10", date:"2026-07-25", title:"Capture a customer's primary brand", items:[
+    "New optional \u201CPrimary brand\u201D field on tickets \u2014 what the customer mainly installs (Trane, Carrier, and so on)",
+    "Pick from your brand list, or choose \u201COther\u201D to type one in",
+    "It's on every ticket type except a tech's own tech call, which already captures the specific unit's manufacturer",
+    "Leave it blank whenever you don't know \u2014 nothing is forced" ],
+    thanks:["Stephen"] },
+  { v:"3.9", date:"2026-07-23", title:"Reset your own password", items:[
+    "Forgot your password? There's a link on the sign-in screen now — you'll get an email and can set a new one yourself",
+    "Reset links sent from a mailbox now land on the right page instead of dropping you straight into the app",
+    "Your snapshot, calendar and reports are unchanged — this is all about getting back in" ]},
   { v:"3.8", date:"2026-07-16", title:"Preview anyone's view", items:[
     "Admins can preview exactly what any person sees — pick them from the “Preview as…” menu up top",
     "It's read-only and clearly banner-marked, so you can look without changing anything or acting as them",
@@ -457,6 +494,12 @@ const categoryGroupsFor = p =>
 // Fallback list — used only until Kathleen drops a brand CSV on the Manager view.
 const MANUFACTURERS_FALLBACK = ["Amana","A.O. Smith","Bard","Bosch","Bradford White","Broan","Bryant","Carrier","Copeland","Daikin","Danfoss","Emerson","Fujitsu","Goodman","Grundfos","Heatcraft","Honeywell","Lennox","LG","Little Giant","Mitsubishi","Modine","Navien","Nordyne","Reznor","Rheem","Rinnai","Ruud","Sporlan","Taco","Tecumseh","Trane","White-Rodgers","York","Other"];
 const manufacturerList = () => (S.manufacturers && S.manufacturers.length) ? S.manufacturers.map(m=>m.name) : MANUFACTURERS_FALLBACK;
+// Curated short list for the Primary brand field (what a customer mainly installs) — kept separate
+// from the full tech manufacturer list on purpose. Alphabetical, with Other as the free-text escape.
+const PRIMARY_BRANDS = ["Amana","Bryant","Carrier","Coleman","Daikin","Goodman","Lennox","Trane","York","Other"];
+// A customer counts as multifamily if its segment code starts with "mf" or "multi"
+// (MF, Multifamily, Multi-Family). This is what surfaces the Contractor field.
+const isMF = t => /^(mf|multi)/i.test((t||"").trim());
 const ACTIONS = ["Call","Visit","Quote follow-up","Other"];
 // Sensible starting time for the first touch, by how the contact happened.
 const FIRST_MINS = { "Call":15, "Visit":30, "Quote follow-up":15, "Other":15 };
@@ -616,6 +659,10 @@ async function load(opts) {
     const act = (S.persona && S.persona.type==="admin")
       ? safe(sbGet("cp_activity?select=*&order=created_at.desc&limit=500"), S.activity||[])
       : null;
+    // My dismissed-ticket acknowledgements (for the "new work" banner).
+    const seen = (S.persona && S.persona.name)
+      ? safe(sbGet("cp_seen?select=request_id&person_name=eq."+encodeURIComponent(S.persona.name)), null)
+      : null;
 
     const [reqs, ups, comments, recurring] = await core;
     S.rows = reqs; S.updates = ups; S.comments = comments; S.recurring = recurring; S.conn = "live";
@@ -630,6 +677,7 @@ async function load(opts) {
           if(S.realPersona) S.realPersona=fresh; else S.persona=fresh; } }
     }
     if(act) S.activity = await act;
+    if(seen){ const sr=await seen; if(sr) S.seenIds=new Set(sr.map(x=>x.request_id)); }
     await spawnDueVisits();
     S.lastSync = new Date().toISOString();
   } catch (e) {
@@ -661,6 +709,7 @@ function parseCSV(text){
 function csvToCustomers(text){
   const rows=parseCSV(text); if(!rows.length) return [];
   let start=0, idx={name:0,account:1,address1:2,address2:3,city:4,state:5,zip:6,phone:7};
+  let typeIdx=-1;
   const first=rows[0].map(c=>c.toLowerCase());
   if(first.some(c=>/name|account|address|addr|city|state|zip|phone|customer/.test(c))){
     start=1;
@@ -670,11 +719,15 @@ function csvToCustomers(text){
     // fall back to positions for any not found
     const def={name:0,account:1,address1:2,address2:3,city:4,state:5,zip:6,phone:7};
     for(const k in idx){ if(idx[k]<0) idx[k]=def[k]; }
+    // Optional segment column (e.g. MF for multifamily). Only captured if a header matches,
+    // and never the same column we already read as name/account.
+    typeIdx=find("type","categor","segment","class");
+    if(typeIdx===idx.name || typeIdx===idx.account) typeIdx=-1;
   }
   const get=(r,i)=> i>=0 ? (r[i]||"").trim()||null : null;
   const out=[];
   for(let i=start;i<rows.length;i++){ const r=rows[i]; const name=(r[idx.name]||"").trim(); if(!name) continue;
-    out.push({ name, account_number:get(r,idx.account), address1:get(r,idx.address1), address2:get(r,idx.address2), city:get(r,idx.city), state:get(r,idx.state), zip:get(r,idx.zip), phone:get(r,idx.phone) }); }
+    out.push({ name, account_number:get(r,idx.account), address1:get(r,idx.address1), address2:get(r,idx.address2), city:get(r,idx.city), state:get(r,idx.state), zip:get(r,idx.zip), phone:get(r,idx.phone), type:get(r,typeIdx) }); }
   return out;
 }
 function addrLines(r){
@@ -704,7 +757,7 @@ async function replaceManufacturers(list){
   await sbDelete("cp_manufacturers","id=not.is.null");
   for(let i=0;i<list.length;i+=400){ await sbPost("cp_manufacturers", list.slice(i,i+400)); }
 }
-function attachAutocomplete(inputId, targets){
+function attachAutocomplete(inputId, targets, onPick){
   const input=document.getElementById(inputId), box=document.getElementById(inputId+"_ac");
   if(!input||!box) return;
   const hide=()=>{ box.style.display="none"; box.innerHTML=""; };
@@ -725,6 +778,7 @@ function attachAutocomplete(inputId, targets){
           else t.classList.remove("autofilled"); };
         set(targets.name,c.name); set(targets.account,c.account_number); set(targets.phone,c.phone);
         set(targets.address1,c.address1); set(targets.address2,c.address2); set(targets.city,c.city); set(targets.state,c.state); set(targets.zip,c.zip);
+        if(onPick) onPick(c);
         hide();
       });
     });
@@ -753,6 +807,29 @@ function noteRow(x, persp){ const {r,status,last}=x; return `<button class="dayr
   </button>`; }
 const matchSearch = (r,q) => { if(!q) return true; q=q.toLowerCase(); return [r.customer_name,r.account_number,r.contact_name,r.assigned_to,r.branch].some(v=>(v||"").toLowerCase().includes(q)); };
 const inScope = r => S.scope==="everyone" ? true : S.scope==="unassigned" ? r.assigned_to==="Unassigned" : r.assigned_to===S.persona.name;
+// Tickets assigned to me, still open, that I haven't acted on (no touch of mine)
+// and haven't dismissed. This drives the "new work" banner. Scheduled-far-out
+// recurring visits are excluded so they don't nag before they're due.
+function newToMe(){
+  if(!S.persona || ["employee","viewer"].includes(S.persona.type)) return [];
+  const me=S.persona.name;
+  return (S.rows||[]).filter(r=>
+    r.assigned_to===me &&
+    OPEN_STATUSES.includes(r.status) &&
+    !isUpcomingVisit(r) &&
+    !(S.seenIds && S.seenIds.has(r.id)) &&
+    !(S.updates||[]).some(u=>u.request_id===r.id && u.author===me)
+  );
+}
+async function dismissNew(ids){
+  ids=(ids||[]).filter(id=>!(S.seenIds&&S.seenIds.has(id)));
+  if(!ids.length || readOnly()) return;
+  S.seenIds=S.seenIds||new Set();
+  ids.forEach(id=>S.seenIds.add(id)); // optimistic — hide immediately
+  render();
+  try{ await sbPost("cp_seen", ids.map(id=>({ person_name:S.persona.name, request_id:id }))); }
+  catch(e){ toast("Couldn't save dismiss — did you run the cp_seen SQL?",false); }
+}
 const SORTS = [["newest","Newest first"],["oldest","Oldest first"],["az","Customer A–Z"],["followup","Follow-up (soonest)"],["urgency","Urgency (high first)"]];
 function sortList(list){
   const arr=list.slice(); const by=S.sort;
@@ -978,8 +1055,8 @@ function changelogModal(){
     </div>
   </div>`;
 }
-const IDEA_STATUS = ["New","Planned","Shipped","Not now"];
-const IDEA_STYLE = { "New":"background:#dbeafe;color:#1e40af;border-color:#bfdbfe", "Planned":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe", "Shipped":"background:#dcfce7;color:#166534;border-color:#bbf7d0", "Not now":"background:#f1f5f9;color:#64748b;border-color:#e2e8f0" };
+const IDEA_STATUS = ["New","Planned","Done","Not now"];
+const IDEA_STYLE = { "New":"background:#dbeafe;color:#1e40af;border-color:#bfdbfe", "Planned":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe", "Done":"background:#dcfce7;color:#166534;border-color:#bbf7d0", "Not now":"background:#f1f5f9;color:#64748b;border-color:#e2e8f0" };
 const TAB_LABEL = { submit:"Submit a Request", mine:"My Submissions", sales:"Sales Dashboard", reports:"Reports", manager:"Manager View", activity:"Activity" };
 // Grab the context for free, so nobody has to describe where they were.
 function ideaContext(){
@@ -1024,6 +1101,73 @@ function openIdea(){ if(S.showChangelog){ try{ localStorage.setItem("cp_seen_ver
 function openChangelog(){ S.showChangelog=true; render(); }
 function closeIdea(){ S.showIdea=false; S.ideaDraft=null; render(); }
 function closeChangelog(){ S.showChangelog=false; try{ localStorage.setItem('cp_seen_version', APP_VERSION); }catch(e){} render(); }
+// --- Tip of the week: a rotating feature spotlight, shown at most once every 7 days per device ---
+// Give a tip a `since:"YYYY-MM-DD"` when it spotlights a brand-new feature — it then jumps
+// to the front and takes the weekly slot for FEATURE_DAYS after that date, before rejoining
+// the normal rotation. Tag the newest one; the most recent `since` within the window wins.
+const FEATURE_DAYS = 14;
+const TIPS = [
+  { title:"Preview anyone's view", body:"Admins can see exactly what any teammate sees — pick a name from the <b>Preview as…</b> menu up top. It's read-only, so you can look without changing anything or acting as them." },
+  { title:"Two calendars in one", body:"The Calendar has two modes. Flip to <b>Activity</b> to see what actually happened each day, with time totals — a real \u201Cwhat did we get done\u201D view. <b>Follow-ups</b> shows what's coming up." },
+  { title:"One-tap quick actions", body:"On any card, the quick-action buttons (Left voicemail, Sent email, Won…) stamp today's date and set your next follow-up in one tap. Drop a number in the <b>Minutes</b> box first and it logs the time too." },
+  { title:"Jump straight from the calendar", body:"Tap any customer on the Calendar — a chip or a day row — to open that card directly. No hunting for it on the board." },
+  { title:"Print a route sheet", body:"Heading into the field? Open a day on the Calendar and tap <b>Print this day</b> for a checkbox route sheet with names, addresses, and what to do." },
+  { title:"Manager notes", body:"Managers can leave a private note on a lead that only sales sees — never the submitter. Reps get a <b>Needs your reply</b> badge until they respond." },
+  { title:"Your new-work banner", body:"When a ticket's assigned to you, a banner appears on <b>every</b> screen until you act on it. Tap <b>View</b> to jump straight to it." },
+  { title:"Log internal support", since:"2026-07-25", body:"Tech support: helped one of our own team? Pick <b>Internal support</b> on the submit screen. It's tracked with your other tech work, so your internal load shows up in the reports." },
+  { title:"Every report filters by person", body:"On the Reports tab, narrow any report to one person and a date range — or the whole team. Handy at review time." },
+  { title:"Customer history in one place", body:"Open any card and scroll to <b>Customer history</b> to see every past call for that customer — tied by account number, even the ones that weren't yours." },
+  { title:"Got an idea? Tell me", body:"Tap the <b>\u{1F4A1}</b> in the header any time something bugs you or an idea strikes. It already knows who you are and where you were — just say the thing. Small ideas are the best ones." },
+];
+// The newest launched tip still inside its spotlight window (or -1 if none).
+function featuredTipIndex(){
+  const now=Date.now(); let best=-1, bestMs=-Infinity;
+  TIPS.forEach((t,i)=>{
+    if(!t.since) return;
+    const ms=new Date(t.since+"T00:00:00").getTime();
+    if(isNaN(ms)) return;
+    const age=(now-ms)/86400000;
+    if(age>=0 && age<=FEATURE_DAYS && ms>bestMs){ bestMs=ms; best=i; }
+  });
+  return best;
+}
+function tipModal(){
+  const t=TIPS[S.tipIndex%TIPS.length];
+  return `<div class="modal-overlay" data-tip-overlay>
+    <div class="modal">
+      <div class="modal-head">
+        <div><div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em">\u{1F4A1} Tip of the week</div>
+        <h2 style="margin:2px 0 0;font-size:19px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(t.title)}${S.tipFeatured?`<span class="cl-new" style="background:#16a34a">New</span>`:""}</h2></div>
+        <button class="modal-x" data-tipclose title="Close">\u2715</button>
+      </div>
+      <div class="modal-body"><div style="font-size:14px;color:#334155;line-height:1.55">${t.body}</div></div>
+      <div class="modal-foot" style="justify-content:space-between;align-items:center">
+        <button class="linkish" data-tipnext style="font-size:12px">Another tip \u2192</button>
+        <button class="btn" data-tipclose>Got it</button>
+      </div>
+    </div>
+  </div>`;
+}
+function maybeShowTip(){
+  if(S.showChangelog || !S.persona) return; // never stack on top of What's-new
+  try{
+    const last=localStorage.getItem("cp_tips_last");
+    const days = last ? (Date.now()-new Date(last).getTime())/86400000 : Infinity;
+    if(days < 7) return;
+    const feat=featuredTipIndex();
+    if(feat>=0){ S.tipIndex=feat; S.tipFeatured=true; }   // new feature takes the slot for its window
+    else { let idx=parseInt(localStorage.getItem("cp_tips_idx")||"0",10); if(isNaN(idx)) idx=0;
+      S.tipIndex = ((idx%TIPS.length)+TIPS.length)%TIPS.length; S.tipFeatured=false; }
+    S.showTip = true;
+  }catch(_){}
+}
+function closeTip(){
+  S.showTip=false;
+  try{ localStorage.setItem("cp_tips_last", new Date().toISOString());
+       // A featured showing doesn't consume a rotation slot, so normal order resumes after the window.
+       if(!S.tipFeatured) localStorage.setItem("cp_tips_idx", String((S.tipIndex+1)%TIPS.length)); }catch(_){}
+  render();
+}
 function loginScreen(){
   return `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#0f172a,#1e293b)">
     <div style="width:100%;max-width:380px">
@@ -1033,23 +1177,14 @@ function loginScreen(){
         <div style="font-size:13px;color:#94a3b8;margin-top:2px">Legacy Group · sign in to continue</div>
       </div>
       <div style="background:#fff;border-radius:16px;padding:24px">
-        ${S.needsPw ? `
-          <div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:4px">Set a new password</div>
-          <div class="tiny muted" style="margin-bottom:16px">You're in as <b>${esc(S.authEmail||"")}</b>. Pick a password you'll remember.</div>
-          <input type="password" id="pw_new" placeholder="New password (8+ characters)" style="width:100%;margin-bottom:10px" autocomplete="new-password"/>
-          <input type="password" id="pw_new2" placeholder="Type it again" style="width:100%;margin-bottom:14px" autocomplete="new-password"/>
-          ${S.authErr?`<div style="font-size:13px;color:#dc2626;margin-bottom:12px">${esc(S.authErr)}</div>`:""}
-          <button class="btn" id="pw_save" ${S.authBusy?'disabled':''} style="width:100%;justify-content:center">${S.authBusy?'Saving…':'Save & continue'}</button>
-          <button class="linkish" id="pw_skip" style="width:100%;text-align:center;margin-top:10px;font-size:12px">Skip for now</button>
-        ` : `
-          <div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:16px">Sign in</div>
-          <input type="email" id="au_email" placeholder="Your work email" value="${esc(S.authEmail||"")}" style="width:100%;margin-bottom:10px" autocomplete="username"/>
-          <input type="password" id="au_pw" placeholder="Password" style="width:100%;margin-bottom:14px" autocomplete="current-password"/>
-          ${S.authErr?`<div style="font-size:13px;color:#dc2626;margin-bottom:12px">${esc(S.authErr)}</div>`:""}
-          <button class="btn" id="au_go" ${S.authBusy?'disabled':''} style="width:100%;justify-content:center">${S.authBusy?'Signing in…':'Sign in'}</button>
-          <div class="tiny muted" style="text-align:center;margin-top:14px"><a href="/reset-password.html" style="color:var(--accent);font-weight:600;text-decoration:none">Forgot your password?</a></div>
-          <div class="tiny muted" style="text-align:center;margin-top:6px">Still stuck? Ask Kathleen to check your account.</div>
-        `}
+        <div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:16px">Sign in</div>
+        <input type="email" id="au_email" placeholder="Your work email" value="${esc(S.authEmail||"")}" style="width:100%;margin-bottom:10px" autocomplete="username"/>
+        <input type="password" id="au_pw" placeholder="Password" style="width:100%;margin-bottom:14px" autocomplete="current-password"/>
+        ${S.authErr?`<div style="font-size:13px;color:#dc2626;margin-bottom:12px">${esc(S.authErr)}</div>`:""}
+        <button class="btn" id="au_go" ${S.authBusy?'disabled':''} style="width:100%;justify-content:center">${S.authBusy?'Signing in…':'Sign in'}</button>
+        <div class="tiny muted" style="text-align:center;margin-top:14px"><a href="/reset-password.html" style="color:var(--accent);font-weight:600;text-decoration:none">Forgot your password?</a></div>
+        <div class="tiny muted" style="text-align:center;margin-top:10px"><a href="user-guide.pdf" target="_blank" rel="noopener" style="color:#64748b;font-weight:600;text-decoration:none">📘 New here? Read the user guide</a></div>
+        <div class="tiny muted" style="text-align:center;margin-top:6px">Still stuck? Ask Kathleen to check your account.</div>
       </div>
     </div>
   </div>`;
@@ -1075,17 +1210,6 @@ function bindLogin(){
     go.onclick=attempt;
     ["au_email","au_pw"].forEach(id=>{ const el=document.getElementById(id); if(el) el.onkeydown=e=>{ if(e.key==="Enter") attempt(); }; });
   }
-  const save=document.getElementById("pw_save");
-  if(save) save.onclick=async()=>{
-    const a=document.getElementById("pw_new").value||"", b=document.getElementById("pw_new2").value||"";
-    if(a.length<8){ S.authErr="Use at least 8 characters."; render(); return; }
-    if(a!==b){ S.authErr="Those two don't match."; render(); return; }
-    S.authBusy=true; S.authErr=null; render();
-    try{ await authUpdatePassword(a); S.needsPw=false; S.authBusy=false; toast("Password saved."); render(); }
-    catch(e){ S.authBusy=false; S.authErr=e.message; render(); }
-  };
-  const skip=document.getElementById("pw_skip");
-  if(skip) skip.onclick=()=>{ S.needsPw=false; render(); };
 }
 // After a successful sign-in: match the email to a cp_people row → that's the persona.
 async function afterLogin(email){
@@ -1110,6 +1234,7 @@ async function afterLogin(email){
   // "offline" from the first pass and fetches admin-only data if they're admin.
   S.conn="connecting";
   await load(S.persona.type==="admin"?{full:true}:undefined);
+  maybeShowTip();
   render();
 }
 function render() {
@@ -1151,7 +1276,7 @@ function render() {
         <div class="brand">
           <div class="logo">${I.activity}</div>
           <div><div class="title">Customer Pulse</div>
-          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button><button class="verpill" data-idea title="Got an idea, or found something broken?" style="margin-left:6px">💡 Idea</button></div></div>
+          <div class="subtitle">Legacy Group <span style="color:#475569">·</span> ${conn}<button class="verpill" data-changelog>v${APP_VERSION} · What's new</button><button class="verpill" data-idea title="Got an idea, or found something broken?" style="margin-left:6px">💡 Idea</button><a class="verpill" href="user-guide.pdf" target="_blank" rel="noopener" title="Open the user guide (PDF)" style="margin-left:6px;text-decoration:none">📘 Guide</a></div></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           ${realPersona().type==="admin" ? `<select class="sortsel" data-previewas title="Preview another person's view" style="max-width:150px">
@@ -1174,8 +1299,14 @@ function render() {
       <span style="color:#b45309;display:inline-flex;flex:none">${I.warn}</span>
       <span class="tiny" style="color:#92400e"><b>Previewing as ${esc(p.name)} (${esc(p.role)}).</b> This is exactly what they see — read-only, nothing you do here is saved.</span>
       <button class="qbtn" data-endpreview style="margin-left:auto;white-space:nowrap">Back to my view</button>
-    </div>`:""}${body}</div></main>
+    </div>`:""}${(()=>{ const nw=newToMe(); if(!nw.length) return ""; if(S.tab==="sales"&&S.special==="newtome") return ""; return `<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-left:3px solid #2563eb;border-radius:10px;padding:10px 14px;margin-bottom:16px">
+      <span style="flex:none;font-size:16px">🔔</span>
+      <span class="tiny" style="color:#1e40af;font-weight:600">You have ${nw.length} new ticket${nw.length===1?"":"s"} assigned to you that you haven't worked yet.</span>
+      <button class="qbtn" data-newwork style="margin-left:auto;white-space:nowrap;background:#0f172a;color:#fff;border-color:#0f172a">View →</button>
+      ${readOnly()?"":`<button class="linkish" data-dismissall style="white-space:nowrap">Dismiss all</button>`}
+    </div>`; })()}${body}</div></main>
     ${S.showChangelog?changelogModal():""}
+    ${(S.showTip && !S.showChangelog && !S.showIdea)?tipModal():""}
     ${S.showIdea?ideaModal():""}`;
   bind();
   if(S._focus){ const el=document.getElementById(S._focus); if(el){ el.focus(); try{ const L=el.value.length; el.setSelectionRange(L,L); }catch(e){} } S._focus=null; }
@@ -1262,6 +1393,15 @@ function viewSubmit() {
       </div>
       <label class="f" style="margin-top:16px"><span class="lbl">${isLead?"What should they look into?":field?(tech?"What happened on this contact?":"What happened on the call?"):"What's going on?"} <span class="req">*</span></span><textarea id="s_reason" placeholder="${isLead?"What you heard, and what you want them to find out. No call gets logged — this is work for someone else.":field?"What you discussed, what they need, how it went.":"Tell sales what you heard or saw. Plain language is fine."}"></textarea></label>
       ${tech&&field?productBlock(false):((isLead?S.persona.type!=="tech":canLogTech)?productBlock(true):"")}
+      ${!(tech&&field)?`<label class="f" style="margin-top:12px"><span class="lbl">Primary brand <span style="color:#94a3b8;font-weight:400">(optional — what this customer mainly installs)</span></span>
+        <select id="s_pbrand" data-pbrand><option value="">—</option>${opts(PRIMARY_BRANDS)}</select>
+        <input id="s_pbrand_other" placeholder="Which brand?" style="margin-top:6px;display:none"/></label>
+      <input type="hidden" id="s_ctype"/>
+      <div id="s_contractor_wrap" style="display:none;margin-top:12px">
+        <label class="f" style="position:relative"><span class="lbl">Contractor <span style="color:#94a3b8;font-weight:400">(optional — who services this property)</span></span>
+          <input id="s_contractor" placeholder="Start typing a contractor…" autocomplete="off"/><div id="s_contractor_ac" class="acbox"></div></label>
+        <div class="tiny" style="color:#0d9488;margin-top:4px">This looks like a multifamily property — tag the contractor who services it, if you know them.</div>
+      </div>`:""}
       ${field?`<label class="f" style="margin-top:12px"><span class="lbl">Follow-up topic <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_topic" placeholder="The specific thing to raise next time"/></label>`:""}
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
         <span class="tiny muted">${isLead?`Raised by <b style="color:#475569">${esc(S.persona.name)}</b> — no call logged, no time recorded`:field?`Logging as <b style="color:#475569">${esc(S.persona.name)}</b> — assigned to you`:`Submitting as <b style="color:#475569">${esc(S.persona.name)}</b>`}</span>
@@ -1322,6 +1462,28 @@ function viewSubmit() {
       </div>
     </div>`;
 
+  const internalCard = () => {
+    const team = (S.people||[]).filter(p=>p.active).map(p=>p.name);
+    const INT_STATUS = ["Resolved","Contacted","Needs more info"];
+    const INT_CATS = ["Technical support","Product question","Needs training","Other"];
+    return `
+    <div class="card">
+      <div class="grid2">
+        <label class="f"><span class="lbl">Who did you help? <span class="req">*</span></span><input id="i_who" list="i_who_list" placeholder="Teammate, counter, or branch"/><datalist id="i_who_list">${team.map(n=>`<option value="${esc(n)}"></option>`).join("")}${BRANCHES.map(b=>`<option value="${esc(b)} branch"></option>`).join("")}</datalist></label>
+        <label class="f"><span class="lbl">Branch <span class="req">*</span></span><select id="i_branch">${opts(BRANCHES)}</select></label>
+        <label class="f"><span class="lbl">Kind of help <span class="req">*</span></span><select id="i_category">${opts(INT_CATS)}</select></label>
+        <label class="f"><span class="lbl">Outcome <span class="req">*</span></span><select id="i_status">${opts(INT_STATUS)}</select></label>
+        <label class="f"><span class="lbl">Manufacturer <span style="color:#94a3b8;font-weight:400">(optional)</span></span><select id="i_mfr"><option value="">—</option>${opts(manufacturerList())}</select></label>
+        <label class="f"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="i_mins" min="0" value="15"/>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${[5,15,30,45,60].map(m=>`<button type="button" class="datechip" data-iminset="${m}">${m}m</button>`).join("")}</div></label>
+      </div>
+      <label class="f" style="margin-top:16px"><span class="lbl">What did they need, and what did you do? <span class="req">*</span></span><textarea id="i_reason" placeholder="The question or issue, and how you helped."></textarea></label>
+      <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
+        <span class="tiny muted">Logged as <b style="color:#475569">${esc(S.persona.name)}</b> — internal tech support, tracked with your other tech work.</span>
+        <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="i_submit">${I.send} ${S.busy?"Logging…":"Log support"}</button></div>
+      </div>
+    </div>`;
+  };
   const titles = {
     counter:["Customer Requests","You see things the rest of us never hear. If a customer needs a call, a visit, or technical help, send it here — it gets tracked, and you can watch what happens."],
     field: tech
@@ -1333,16 +1495,18 @@ function viewSubmit() {
         ? ["Refer it to sales","Heard a sales opening on a tech call? Send it over rather than logging a sales call you didn't make."]
         : ["Refer it to tech support","Spotted something technical you can't take on? Send it to the tech team rather than logging a tech call in your name."],
     recurring:["Schedule a recurring visit","Set a customer to be visited on a repeating cadence. The next visit is scheduled from the day the last one is completed."],
-    project:["Set up a project to monitor","Create a long-running project card — the assigned rep visits and logs touches against it over the life of the job."]
+    project:["Set up a project to monitor","Create a long-running project card — the assigned rep visits and logs touches against it over the life of the job."],
+    internal:["Log internal support","Helping one of our own \u2014 a salesperson, the counter, a branch. It's tracked as tech work, so your internal load shows up in the reports too."]
   };
   const [title,sub]=titles[mode];
   const selector = emp ? "" : `<div class="modeseg">
     <button data-submode="field" class="${mode==='field'?'active':''}">${tech?"Tech call":"Field call"}</button>
     <button data-submode="lead" class="${mode==='lead'?'active':''}">${canAssign?"Lead":"Refer"}</button>
+    ${(tech||canAssign)?`<button data-submode="internal" class="${mode==='internal'?'active':''}">Internal support</button>`:""}
     <button data-submode="recurring" class="${mode==='recurring'?'active':''}">Recurring visit</button>
     <button data-submode="project" class="${mode==='project'?'active':''}">Project</button>
   </div>`;
-  const card = mode==="recurring"?recurringCard() : mode==="project"?projectCard() : basicCard(mode==="field");
+  const card = mode==="recurring"?recurringCard() : mode==="project"?projectCard() : mode==="internal"?internalCard() : basicCard(mode==="field");
 
   return `
   <div style="max-width:680px">
@@ -1379,12 +1543,22 @@ function listItem(r, sales) {
 }
 
 const techBadge = r => isTech(r) ? `<span style="font-size:11px;font-weight:700;color:#9a3412;background:#ffedd5;padding:1px 8px;border-radius:999px">Tech</span>` : "";
+// The customer's segment type — prefer the snapshot stored on the ticket, else look it
+// up live from the current directory (so existing cards badge as soon as the file has types).
+function customerTypeOf(r){
+  if(r.customer_type) return r.customer_type;
+  const acct=(r.account_number||"").trim(); const name=(r.customer_name||"").trim().toLowerCase();
+  const c=(S.customers||[]).find(x=> (acct && (x.account_number||"").trim()===acct) || (name && (x.name||"").trim().toLowerCase()===name));
+  return (c && c.type) || null;
+}
+const typeBadge = r => { const t=customerTypeOf(r); return t ? `<span style="font-size:11px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:1px 8px;border-radius:999px" title="Customer type from the morning file">${esc(t)}</span>` : ""; };
 const sourceBadge = r =>
   r.source==='Field call' ? `<span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:1px 8px;border-radius:999px">Field call</span>`
   : r.source==='Project' ? `<span style="font-size:11px;font-weight:600;color:#6d28d9;background:#ede9fe;padding:1px 8px;border-radius:999px">Project</span>`
   : r.source==='Recurring visit' ? `<span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px">Recurring visit</span>`
   : r.source==='Manager lead' ? `<span style="font-size:11px;font-weight:600;color:#0f766e;background:#ccfbf1;padding:1px 8px;border-radius:999px">Manager lead</span>`
   : r.source==='Referral' ? `<span style="font-size:11px;font-weight:600;color:#9a3412;background:#ffedd5;padding:1px 8px;border-radius:999px">Referral</span>`
+  : r.source==='Internal support' ? `<span style="font-size:11px;font-weight:600;color:#3730a3;background:#e0e7ff;padding:1px 8px;border-radius:999px">Internal</span>`
   : `<span style="font-size:11px;font-weight:600;color:#b91c1c;background:#fee2e2;padding:1px 8px;border-radius:999px">Sales call request</span>`;
 function subCard(r){
   const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
@@ -1411,6 +1585,7 @@ function salesCard(r){
     <div style="display:flex;flex-wrap:wrap;gap:5px">
       ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
       ${techBadge(r)}
+      ${typeBadge(r)}
       ${sourceBadge(r)}
       ${isUpcomingVisit(r)?`<span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:1px 8px;border-radius:999px">Scheduled · ${fmtDate(r.next_follow_up)}</span>`:""}
       ${hasNote?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
@@ -1418,6 +1593,7 @@ function salesCard(r){
     <div class="kv"><b>Rep:</b> ${r.assigned_to==='Unassigned'?'Unassigned':esc(r.assigned_to)}</div>
     <div class="kv"><b>Submitted by:</b> ${esc(r.submitted_by)} · ${fmtDate(r.submitted_at)}</div>
     <div class="kv"><b>${esc(r.category)}</b>${r.source!=='Field call'?` · ${esc(r.suggested_action)}`:''}</div>
+    ${r.contractor?`<div class="kv"><b>Contractor:</b> ${esc(r.contractor)}</div>`:""}
     ${(()=>{const a=addrLines(r);return a.any?`<div class="kv" style="color:#64748b">📍 ${esc([a.l1,a.l2].filter(Boolean).join(', '))}</div>`:"";})()}
     <div class="rsn">${esc(r.reason)}</div>
   </button>`;
@@ -1532,9 +1708,11 @@ function viewSales() {
     ${viewNotes()}`;
   }
   const f = S.filter;
-  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days", nofollowup:"No follow-up date set", today:"Due today" };
+  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days", nofollowup:"No follow-up date set", today:"Due today", newtome:"New to you — not worked yet" };
   let list;
-  if(S.special){
+  if(S.special==="newtome"){
+    list = newToMe();
+  } else if(S.special){
     list = S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
     if(S.special==="unassigned") list=list.filter(r=>r.assigned_to==='Unassigned');
     else if(S.special==="overdue") list=list.filter(r=>r.next_follow_up && r.next_follow_up < today());
@@ -1676,7 +1854,7 @@ function viewCalendar(){
         <button class="linkish" data-daynav="today" style="margin-left:4px">Today</button>
       </div>`;
       const listHtml = dayActs.length ? `<div class="stack">${dayActs.map(u=>{ const {r,who,what,mins}=actLabel(u); return `
-        <button class="dayrow" data-open="${u.request_id}">
+        <button class="dayrow" data-noteopen="${u.request_id}">
           <span class="cdot" style="background:${r&&isTech(r)?'#ea580c':'#2563eb'}"></span>
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${esc((r&&r.customer_name)||'(unknown)')} ${r?techBadge(r):''}</div>
@@ -1708,7 +1886,7 @@ function viewCalendar(){
       const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       const items=(byDay[day]||[]);
       const mins=items.reduce((s,u)=>s+(Number(u.minutes)||0),0);
-      const chips=items.slice(0,3).map(u=>{ const r=byId[u.request_id]; return `<button class="calchip" data-open="${u.request_id}"><span class="cdot" style="background:${r&&isTech(r)?'#ea580c':'#2563eb'}"></span><span class="nm">${esc((r&&r.customer_name)||'?')}</span></button>`;}).join("");
+      const chips=items.slice(0,3).map(u=>{ const r=byId[u.request_id]; return `<button class="calchip" data-noteopen="${u.request_id}"><span class="cdot" style="background:${r&&isTech(r)?'#ea580c':'#2563eb'}"></span><span class="nm">${esc((r&&r.customer_name)||'?')}</span></button>`;}).join("");
       const more=items.length>3?`<button class="linkish" data-calday="${iso}" style="font-size:11px;padding-left:2px">+${items.length-3} more</button>`:"";
       const badge=items.length?`<span style="font-size:10px;font-weight:700;color:#64748b">${items.length}${mins?` · ${Math.round(mins/60*10)/10}h`:''}</span>`:"";
       cells+=`<div class="calcell${iso===todayStr?' today':''}"><div style="display:flex;justify-content:space-between;align-items:center"><button class="caldaynum" data-calday="${iso}" title="Open day view">${day}</button>${badge}</div>${chips}${more}</div>`;
@@ -1748,7 +1926,7 @@ function viewCalendar(){
       <button class="linkish" data-daynav="today" style="margin-left:4px">Today</button>
     </div>`;
     const listHtml = dayCards.length ? `<div class="stack">${dayCards.map(r=>`
-      <button class="dayrow" data-open="${r.id}">
+      <button class="dayrow" data-noteopen="${r.id}">
         <span class="cdot" style="background:${stageColor(r.status)}"></span>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px;color:#0f172a;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${esc(r.customer_name)} ${pill(r.status)} ${sourceBadge(r)}</div>
@@ -1783,7 +1961,7 @@ function viewCalendar(){
   for(let day=1;day<=daysInMonth;day++){
     const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const items=(byDay[day]||[]);
-    const chips=items.slice(0,4).map(r=>`<button class="calchip" data-open="${r.id}"><span class="cdot" style="background:${stageColor(r.status)}"></span><span class="nm">${esc(r.customer_name)}</span></button>`).join("");
+    const chips=items.slice(0,4).map(r=>`<button class="calchip" data-noteopen="${r.id}"><span class="cdot" style="background:${stageColor(r.status)}"></span><span class="nm">${esc(r.customer_name)}</span></button>`).join("");
     const more=items.length>4?`<button class="linkish" data-calday="${iso}" style="font-size:11px;padding-left:2px">+${items.length-4} more</button>`:"";
     cells+=`<div class="calcell${iso===todayStr?' today':''}"><button class="caldaynum" data-calday="${iso}" title="Open day view">${day}</button>${chips}${more}</div>`;
   }
@@ -1837,8 +2015,9 @@ function viewSalesDetail() {
   const latestMgr = mgrNotes.length ? mgrNotes[mgrNotes.length-1] : null;
   return `
   <button class="backlink" data-back="sales">← Back to dashboard</button>
-  <div style="display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 14px">
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 14px;align-items:center">
     ${hist.length?`<button class="linkish" data-scroll="cust-history">↓ ${hist.length} prior call${hist.length===1?'':'s'} — jump to customer history</button>`:""}
+    ${(!readOnly() && newToMe().some(x=>x.id===r.id))?`<button class="linkish" data-dismissone="${r.id}" style="color:#64748b">✓ Dismiss from my new list</button>`:""}
   </div>
   ${latestMgr?`<div class="mgrbanner">
     <div class="tiny" style="font-weight:700;color:#9f1239;display:flex;align-items:center;gap:6px">Note from ${esc(latestMgr.author)} (Manager) · ${esc(fmtDateTime(latestMgr.created_at))}</div>
@@ -1862,6 +2041,9 @@ function viewSalesDetail() {
           ${info("Branch",r.branch)}${info("Category",r.category)}
           ${info("Wants",r.suggested_action)}${info("Urgency",r.urgency)}
           ${info("Submitted by",r.submitted_by+" · "+fmtDate(r.submitted_at))}${info("Age",days(r.submitted_at,today())+" days")}
+          ${r.primary_brand?info("Primary brand",r.primary_brand):""}
+          ${customerTypeOf(r)?info("Customer type",customerTypeOf(r)):""}
+          ${r.contractor?info("Contractor",r.contractor):""}
         </div>
         <div class="softbox" style="margin-bottom:16px">
           <div class="tiny" style="color:#64748b;margin-bottom:4px">${r.source==="Manager lead"||r.source==="Referral"?`Why ${esc(r.submitted_by)} raised this`:"What the counter flagged"}</div>
@@ -1966,13 +2148,29 @@ function minsChip(u){
 }
 const delChip = u => (!readOnly() && S.persona.type==="admin")
   ? `<span class="tbit" style="cursor:pointer;color:#dc2626;border-color:#fecaca" data-deltouch="${u.id}" title="Remove this touch entirely">Remove</span>` : "";
+// Admin-only: correct a saved touch (note, public summary, time). Uses existing columns — no schema change.
+const editChip = u => (!readOnly() && S.persona.type==="admin" && S.editTouchFull!==u.id)
+  ? `<span class="tbit" style="cursor:pointer;color:#2563eb;border-color:#bfdbfe" data-touchedit="${u.id}" title="Edit this touch">Edit</span>` : "";
 function touchTimeline(u){
+  if(S.editTouchFull===u.id){
+    return `<div class="touch" style="border-left-color:#2563eb;background:#f7f9ff">
+      <div class="tiny" style="font-weight:700;color:#1e40af;margin-bottom:8px">Editing touch · ${esc(fmtDateTime(u.created_at,u.update_date))}${u.author?' · '+esc(u.author):''}</div>
+      <label class="f"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="te_mins" min="0" value="${esc(u.minutes||"")}"/></label>
+      <label class="f" style="margin-top:8px"><span class="lbl">Internal note <span style="color:#94a3b8;font-weight:400">— sales only</span></span><textarea id="te_note" style="min-height:60px">${esc(u.note||"")}</textarea></label>
+      <label class="f" style="margin-top:8px"><span class="lbl">Public summary <span style="color:#94a3b8;font-weight:400">— the submitter sees this</span></span><textarea id="te_public" style="min-height:60px">${esc(u.public_summary||"")}</textarea></label>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn" data-savetouch="${u.id}" ${S.busy?'disabled':''}>${S.busy?'Saving…':'Save changes'}</button>
+        <button class="btn-ghost" data-canceltouch="1" ${S.busy?'disabled':''}>Cancel</button>
+      </div>
+    </div>`;
+  }
   const bits=[];
   const mc=minsChip(u); if(mc) bits.push(mc);
   if(u.products_discussed) bits.push(`<span class="tbit">Products: ${esc(u.products_discussed)}</span>`);
   if(u.quote_number||Number(u.quoted_value)) bits.push(`<span class="tbit">Quote ${esc(u.quote_number||'')}${Number(u.quoted_value)?' · $'+Number(u.quoted_value).toLocaleString():''}</span>`);
   if(u.order_number||Number(u.ordered_value)) bits.push(`<span class="tbit">Order ${esc(u.order_number||'')}${Number(u.ordered_value)?' · $'+Number(u.ordered_value).toLocaleString():''}</span>`);
   if(u.follow_up_topic) bits.push(`<span class="tbit">Covered: ${esc(u.follow_up_topic)}</span>`);
+  const ec=editChip(u); if(ec) bits.push(ec);
   const dc=delChip(u); if(dc) bits.push(dc);
   if(u.contact_type){
     return `<div class="touch">
@@ -2436,7 +2634,7 @@ function ideasCard(){
   const fresh=ideas.filter(i=>i.status==="New");
   return `<div class="card" style="margin-bottom:20px;border:1px solid ${fresh.length?"#fde68a":"#f1f5f9"};background:${fresh.length?"#fffdf5":"#fff"}">
     <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#f59e0b">\u{1F4A1}</span> Ideas &amp; problems ${fresh.length?`<span class="pill" style="${IDEA_STYLE.New}">${fresh.length} new</span>`:""}</h2>
-    <div class="tiny muted" style="margin-bottom:12px">What the team sent from the lightbulb in the header.${ideas.length?` Mark one <b>Shipped</b> when you build it, then credit them in the changelog \u2014 that's what makes a second idea happen.`:""}</div>
+    <div class="tiny muted" style="margin-bottom:12px">What the team sent from the lightbulb in the header.${ideas.length?` Mark one <b>Done</b> when you build it, then credit them in the changelog \u2014 that's what makes a second idea happen.`:""}</div>
     ${ideas.length? `<div>${ideas.map(i=>`
       <div style="padding:10px 0;border-bottom:1px solid #f1f5f9">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
@@ -2776,7 +2974,27 @@ function bind() {
     try{ await sbDelete("cp_updates","id=eq."+u.id); logActivity("touch_edit","removed a touch"); toast("Touch removed."); S.busy=false; await load(); }
     catch(e){ toast("Couldn't remove it — did you run the touch-fix SQL?",false); S.busy=false; render(); }
   });
+  document.querySelectorAll("[data-touchedit]").forEach(b=>b.onclick=()=>{ S.editTouchFull=b.dataset.touchedit; S.editTouch=null; render(); });
+  const ctb=document.querySelector("[data-canceltouch]"); if(ctb) ctb.onclick=()=>{ S.editTouchFull=null; render(); };
+  const stb=document.querySelector("[data-savetouch]");
+  if(stb) stb.onclick=async()=>{
+    const id=stb.dataset.savetouch;
+    const rawM=document.getElementById("te_mins").value.trim();
+    const mins = rawM==="" ? null : Number(rawM);
+    if(mins!==null && (isNaN(mins) || mins<0)){ toast("Minutes needs to be a number.",false); return; }
+    const note=document.getElementById("te_note").value.trim()||null;
+    const pub=document.getElementById("te_public").value.trim()||null;
+    S.busy=true; render();
+    try{
+      await sbPatch("cp_updates","id=eq."+id,{ minutes:mins, note, public_summary:pub });
+      logActivity("touch_edit","edited a touch");
+      S.editTouchFull=null; toast("Touch updated."); S.busy=false; await load();
+    }catch(e){ toast("Couldn't save the edit. Try again.",false); S.busy=false; render(); }
+  };
   const cl=document.querySelector("[data-changelog]"); if(cl) cl.onclick=openChangelog;
+  document.querySelectorAll("[data-tipclose]").forEach(b=>b.onclick=closeTip);
+  const tn=document.querySelector("[data-tipnext]"); if(tn) tn.onclick=()=>{ S.tipIndex=(S.tipIndex+1)%TIPS.length; S.tipFeatured=false; render(); };
+  const tov=document.querySelector("[data-tip-overlay]"); if(tov) tov.onclick=(e)=>{ if(e.target===tov) closeTip(); };
   document.querySelectorAll("[data-idea]").forEach(b=>b.onclick=openIdea);
   document.querySelectorAll("[data-ideakind]").forEach(b=>b.onclick=()=>{
     const t=document.getElementById("idea_body"); if(t) S.ideaDraft=t.value;
@@ -2843,6 +3061,9 @@ function bind() {
   document.querySelectorAll("[data-mgrnotefilter]").forEach(b=>b.onclick=()=>{ S.mgrNoteFilter=b.dataset.mgrnotefilter; render(); });
   document.querySelectorAll("[data-mgrnotewho]").forEach(b=>b.onclick=()=>{ S.mgrNoteWho=b.dataset.mgrnotewho; render(); });
   document.querySelectorAll("[data-noteopen]").forEach(b=>b.onclick=()=>{ S.tab="sales"; S.selectedId=b.dataset.noteopen; render(); });
+  const nwv=document.querySelector("[data-newwork]"); if(nwv) nwv.onclick=()=>{ S.tab="sales"; S.scope="mine"; S.special="newtome"; S.selectedId=null; S.salesView="cards"; render(); };
+  const nwd=document.querySelector("[data-dismissall]"); if(nwd) nwd.onclick=()=>{ if(confirm("Dismiss all new tickets from your banner? They stay on your dashboard — this just clears the alert.")) dismissNew(newToMe().map(r=>r.id)); };
+  const d1=document.querySelector("[data-dismissone]"); if(d1) d1.onclick=()=>dismissNew([d1.dataset.dismissone]);
   const cv=document.querySelector("[data-complete-visit]"); if(cv) cv.onclick=()=>completeVisit(S.rows.find(x=>x.id===S.selectedId));
   const ma=document.querySelector("[data-markaddressed]"); if(ma) ma.onclick=markAddressed;
   const cperson=document.querySelector("[data-calperson]"); if(cperson) cperson.onchange=()=>{ S.calPerson=cperson.value; render(); };
@@ -2877,6 +3098,14 @@ function bind() {
     catch(e){ toast("Couldn't stop it. Try again.",false); S.busy=false; render(); }
   });
 
+  const pbSelEl=document.getElementById("s_pbrand");
+  if(pbSelEl){
+    // Make sure "Other" is always offered even if the uploaded brand list omits it.
+    if(![...pbSelEl.options].some(o=>o.value==="Other")){ const o=document.createElement("option"); o.value="Other"; o.textContent="Other"; pbSelEl.appendChild(o); }
+    const other=document.getElementById("s_pbrand_other");
+    const syncPb=()=>{ if(other) other.style.display = pbSelEl.value==="Other" ? "block" : "none"; };
+    pbSelEl.addEventListener("change",syncPb); syncPb();
+  }
   const sb=document.getElementById("s_submit");
   if(sb) sb.onclick=async()=>{
     const g=id=>{ const el=document.getElementById(id); return el?el.value.trim():""; };
@@ -2884,8 +3113,12 @@ function bind() {
     const isTechPersona=S.persona.type==="tech";
     const category=document.getElementById("s_category").value;
     const type = isTechPersona || TECH_CATEGORIES.has(category) ? "tech" : "sales";
+    const pbSel=document.getElementById("s_pbrand");
+    const primary_brand = pbSel ? (pbSel.value==="Other" ? (g("s_pbrand_other")||null) : (pbSel.value||null)) : null;
+    const customer_type = g("s_ctype")||null;
+    const contractor = (customer_type && isMF(customer_type)) ? (g("s_contractor")||null) : null;
     const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, address1:g("s_addr1")||null, address2:g("s_addr2")||null, city:g("s_city")||null, state:g("s_state")||null, zip:g("s_zip")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category, urgency:document.getElementById("s_urgency").value, reason:g("s_reason"),
-      type, manufacturer:g("s_mfr")||null, model:g("s_model")||null, serial:g("s_serial")||null, case_number:g("s_caseno")||null, issue:g("s_issue")||null };
+      type, manufacturer:g("s_mfr")||null, model:g("s_model")||null, serial:g("s_serial")||null, case_number:g("s_caseno")||null, issue:g("s_issue")||null, primary_brand, customer_type, contractor };
     if(!base.customer_name||!base.reason){ toast("Customer name and the details are required.",false); return; }
     if(type==="tech" && field && isTechPersona && !base.issue){ toast("Describe the issue before logging it.",false); return; }
     const lead = S.submitMode==="lead" && field;
@@ -2940,7 +3173,17 @@ function bind() {
   const sT={name:"s_customer",account:"s_account",phone:"s_phone",address1:"s_addr1",address2:"s_addr2",city:"s_city",state:"s_state",zip:"s_zip"};
   const pT={name:"p_customer",account:"p_account",phone:"p_phone",address1:"p_addr1",address2:"p_addr2",city:"p_city",state:"p_state",zip:"p_zip"};
   const rT={name:"r_customer",account:"r_account",phone:"r_phone",address1:"r_addr1",address2:"r_addr2",city:"r_city",state:"r_state",zip:"r_zip"};
-  attachAutocomplete("s_customer",sT); attachAutocomplete("s_account",sT);
+  // When the picked customer is multifamily, reveal the Contractor field and stash the type.
+  const mfSync=(c)=>{
+    const ct=document.getElementById("s_ctype"); const wrap=document.getElementById("s_contractor_wrap");
+    if(ct) ct.value=(c&&c.type)||"";
+    if(wrap) wrap.style.display = isMF(c&&c.type) ? "block" : "none";
+  };
+  attachAutocomplete("s_customer",sT,mfSync); attachAutocomplete("s_account",sT,mfSync);
+  attachAutocomplete("s_contractor",{name:"s_contractor"});
+  // Clearing the customer name hides the contractor field again.
+  const scust=document.getElementById("s_customer");
+  if(scust) scust.addEventListener("input",()=>{ if(!scust.value.trim()){ const w=document.getElementById("s_contractor_wrap"); if(w) w.style.display="none"; const ct=document.getElementById("s_ctype"); if(ct) ct.value=""; } });
   attachAutocomplete("p_customer",pT); attachAutocomplete("p_account",pT);
   attachAutocomplete("r_customer",rT); attachAutocomplete("r_account",rT);
 
@@ -2975,6 +3218,29 @@ function bind() {
     S.busy=true; render();
     try{ await sbPost("cp_requests",payload); logActivity("submit","created a project: "+customer); toast("Project created — it's on the board."); S.tab="sales"; S.scope="everyone"; S.busy=false; await load(); }
     catch(e){ toast("Couldn't create the project. Try again.",false); S.busy=false; render(); }
+  };
+
+  document.querySelectorAll("[data-iminset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById("i_mins"); if(el) el.value=b.dataset.iminset; });
+  const ib=document.getElementById("i_submit");
+  if(ib) ib.onclick=async()=>{
+    const g=id=>{ const el=document.getElementById(id); return el?el.value.trim():""; };
+    const who=g("i_who"), reason=g("i_reason");
+    if(!who||!reason){ toast("Who you helped and what you did are required.",false); return; }
+    const mins=Number(document.getElementById("i_mins").value)||null;
+    const status=document.getElementById("i_status").value;
+    const payload={ submitted_by:S.persona.name, customer_name:who, branch:document.getElementById("i_branch").value,
+      category:document.getElementById("i_category").value, urgency:"Medium", suggested_action:"Other",
+      reason, type:"tech", source:"Internal support", assigned_to:S.persona.name, status,
+      manufacturer:g("i_mfr")||null, first_touched_at:today(), last_action_date:today() };
+    S.busy=true; render();
+    try{
+      const res=await sbPost("cp_requests",payload);
+      const row=Array.isArray(res)?res[0]:res;
+      if(row&&row.id){ try{ await sbPost("cp_updates",{ request_id:row.id, update_date:today(), contact_type:"Internal support", status, note:reason, author:S.persona.name, minutes:mins }); }catch(_){}
+      }
+      logActivity("submit","logged internal support for "+who);
+      toast("Internal support logged — it's in your pipeline."); S.tab="sales"; S.scope="mine"; S.busy=false; await load();
+    }catch(e){ toast("Couldn't log it. Try again.",false); S.busy=false; render(); }
   };
 
   const us=document.getElementById("u_save");
