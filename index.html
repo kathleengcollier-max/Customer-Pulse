@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="favicon.png">
 <style>
   * { box-sizing: border-box; }
+  @keyframes cpNewPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.22); } }
   :root { --red:#C8102E; --accent:#C8102E; }
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:#f8fafc; color:#1e293b; margin:0; }
   a { color: inherit; }
@@ -1299,11 +1300,13 @@ function render() {
       <span style="color:#b45309;display:inline-flex;flex:none">${I.warn}</span>
       <span class="tiny" style="color:#92400e"><b>Previewing as ${esc(p.name)} (${esc(p.role)}).</b> This is exactly what they see — read-only, nothing you do here is saved.</span>
       <button class="qbtn" data-endpreview style="margin-left:auto;white-space:nowrap">Back to my view</button>
-    </div>`:""}${(()=>{ const nw=newToMe(); if(!nw.length) return ""; if(S.tab==="sales"&&S.special==="newtome") return ""; return `<div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-left:3px solid #2563eb;border-radius:10px;padding:10px 14px;margin-bottom:16px">
-      <span style="flex:none;font-size:16px">🔔</span>
-      <span class="tiny" style="color:#1e40af;font-weight:600">You have ${nw.length} new ticket${nw.length===1?"":"s"} assigned to you that you haven't worked yet.</span>
-      <button class="qbtn" data-newwork style="margin-left:auto;white-space:nowrap;background:#0f172a;color:#fff;border-color:#0f172a">View →</button>
-      ${readOnly()?"":`<button class="linkish" data-dismissall style="white-space:nowrap">Dismiss all</button>`}
+    </div>`:""}${(()=>{ const nw=newToMe(); if(!nw.length) return ""; if(S.tab==="sales"&&S.special==="newtome") return ""; return `<div style="display:flex;align-items:center;gap:13px;background:linear-gradient(90deg,#2563eb,#1d4ed8);border-radius:13px;padding:15px 18px;margin-bottom:18px;box-shadow:0 6px 18px rgba(37,99,235,.38)">
+      <span style="flex:none;font-size:24px;display:inline-block;animation:cpNewPulse 1.5s ease-in-out infinite;transform-origin:center">🔔</span>
+      <span style="color:#fff;font-weight:800;font-size:15px;line-height:1.3">${nw.length} new ticket${nw.length===1?"":"s"} assigned to you<span style="font-weight:600;color:#dbeafe"> — you haven't worked ${nw.length===1?"it":"them"} yet.</span></span>
+      <span style="margin-left:auto;display:flex;gap:8px;flex:none">
+        <button data-newwork style="white-space:nowrap;background:#fff;color:#1d4ed8;font-weight:800;border:none;border-radius:9px;padding:9px 17px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12)">View →</button>
+        ${readOnly()?"":`<button data-dismissall style="white-space:nowrap;background:transparent;color:#eff6ff;font-weight:600;border:1.5px solid rgba(255,255,255,.55);border-radius:9px;padding:9px 13px;cursor:pointer">Dismiss all</button>`}
+      </span>
     </div>`; })()}${body}</div></main>
     ${S.showChangelog?changelogModal():""}
     ${(S.showTip && !S.showChangelog && !S.showIdea)?tipModal():""}
@@ -1551,7 +1554,27 @@ function customerTypeOf(r){
   const c=(S.customers||[]).find(x=> (acct && (x.account_number||"").trim()===acct) || (name && (x.name||"").trim().toLowerCase()===name));
   return (c && c.type) || null;
 }
-const typeBadge = r => { const t=customerTypeOf(r); return t ? `<span style="font-size:11px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:1px 8px;border-radius:999px" title="Customer type from the morning file">${esc(t)}</span>` : ""; };
+// Customer category codes from the ARW All Customers report, spelled out for display.
+// Add the rest as they're confirmed; any code not listed shows as-is.
+const CATEGORY_LABELS = {
+  MF:  "MultiFamily",
+  CO:  "Contractor",
+  MI:  "Misc",
+  MR:  "MRO",
+  PM:  "Property Maintenance",
+  HO:  "Hotel",
+  SS:  "SiteMax",
+  RF:  "Restaurant/Food",
+  RW:  "Retail/Wholesale",
+  ME:  "Medical",
+  GM:  "Government",
+  ED:  "Education",
+  JS:  "Johnstone Branches",
+  INT: "Internal Accounts",
+  PS:  "Pritchard Supply Intercompany",
+};
+const catLabel = code => { const k=(code||"").trim().toUpperCase(); return CATEGORY_LABELS[k] || code; };
+const typeBadge = r => { const t=customerTypeOf(r); return t ? `<span style="font-size:11px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:1px 8px;border-radius:999px;white-space:nowrap" title="Customer category (from ARW All Customers)">${esc(catLabel(t))}</span>` : ""; };
 const sourceBadge = r =>
   r.source==='Field call' ? `<span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:1px 8px;border-radius:999px">Field call</span>`
   : r.source==='Project' ? `<span style="font-size:11px;font-weight:600;color:#6d28d9;background:#ede9fe;padding:1px 8px;border-radius:999px">Project</span>`
@@ -1577,7 +1600,10 @@ function salesCard(r){
   const hasNote=commentsFor(r.id).some(isMgrNote);
   const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
   return `<button class="subcard${hi?' hipri':''}" data-open="${r.id}" style="border-top:4px solid ${stageColor(r.status)}">
-    <div class="cn">${esc(r.customer_name)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div class="cn">${esc(r.customer_name)}</div>
+      ${typeBadge(r)}
+    </div>
     <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
       ${pill(r.status)}
       <span class="urg"><span class="udot" style="background:${r.urgency==='High'?'#f43f5e':r.urgency==='Medium'?'#f59e0b':'#94a3b8'}"></span>${esc(r.urgency)}</span>
@@ -1585,7 +1611,6 @@ function salesCard(r){
     <div style="display:flex;flex-wrap:wrap;gap:5px">
       ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
       ${techBadge(r)}
-      ${typeBadge(r)}
       ${sourceBadge(r)}
       ${isUpcomingVisit(r)?`<span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:1px 8px;border-radius:999px">Scheduled · ${fmtDate(r.next_follow_up)}</span>`:""}
       ${hasNote?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
@@ -2037,12 +2062,20 @@ function viewSalesDetail() {
           <select data-assign-lead class="sortsel" ${(S.busy||readOnly())?'disabled':''}>${assigneeOptions(r.assigned_to)}</select>
           <span class="tiny muted">— this lead's assigned rep</span>
         </div>
+        <div style="margin-bottom:16px;padding:10px 12px;background:#f8fafc;border:1px solid #eef2f6;border-radius:10px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="tiny" style="font-weight:600;color:#475569">Follow-up</span>
+            <input type="date" id="d_followup" class="sortsel" value="${esc(r.next_follow_up||'')}" ${readOnly()?'disabled':''} style="padding:5px 8px"/>
+            ${(r.next_follow_up&&r.next_follow_up<today()&&OPEN_STATUSES.includes(r.status))?`<span class="tiny" style="color:#e11d48;font-weight:700">overdue</span>`:(r.next_follow_up?"":`<span class="tiny muted">none set</span>`)}
+          </div>
+          ${readOnly()?"":dateChips("d_followup")}
+        </div>
         <div class="grid2" style="gap:8px;margin-bottom:16px">
           ${info("Branch",r.branch)}${info("Category",r.category)}
           ${info("Wants",r.suggested_action)}${info("Urgency",r.urgency)}
           ${info("Submitted by",r.submitted_by+" · "+fmtDate(r.submitted_at))}${info("Age",days(r.submitted_at,today())+" days")}
           ${r.primary_brand?info("Primary brand",r.primary_brand):""}
-          ${customerTypeOf(r)?info("Customer type",customerTypeOf(r)):""}
+          ${customerTypeOf(r)?info("Customer category",catLabel(customerTypeOf(r))):""}
           ${r.contractor?info("Contractor",r.contractor):""}
         </div>
         <div class="softbox" style="margin-bottom:16px">
@@ -2155,7 +2188,8 @@ function touchTimeline(u){
   if(S.editTouchFull===u.id){
     return `<div class="touch" style="border-left-color:#2563eb;background:#f7f9ff">
       <div class="tiny" style="font-weight:700;color:#1e40af;margin-bottom:8px">Editing touch · ${esc(fmtDateTime(u.created_at,u.update_date))}${u.author?' · '+esc(u.author):''}</div>
-      <label class="f"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="te_mins" min="0" value="${esc(u.minutes||"")}"/></label>
+      ${u.contact_type?`<label class="f"><span class="lbl">Touch type <span style="color:#94a3b8;font-weight:400">— what kind of contact this was</span></span><select id="te_type">${(()=>{ const rr=(S.rows||[]).find(x=>x.id===u.request_id); const keys=Object.keys(touchMapFor(rr||{})); if(!keys.includes(u.contact_type)) keys.unshift(u.contact_type); return keys.map(k=>`<option ${k===u.contact_type?"selected":""}>${esc(k)}</option>`).join(""); })()}</select></label>`:""}
+      <label class="f" style="margin-top:8px"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="te_mins" min="0" value="${esc(u.minutes||"")}"/></label>
       <label class="f" style="margin-top:8px"><span class="lbl">Internal note <span style="color:#94a3b8;font-weight:400">— sales only</span></span><textarea id="te_note" style="min-height:60px">${esc(u.note||"")}</textarea></label>
       <label class="f" style="margin-top:8px"><span class="lbl">Public summary <span style="color:#94a3b8;font-weight:400">— the submitter sees this</span></span><textarea id="te_public" style="min-height:60px">${esc(u.public_summary||"")}</textarea></label>
       <div style="display:flex;gap:8px;margin-top:10px">
@@ -2632,21 +2666,30 @@ function viewReports(){
 function ideasCard(){
   const ideas=S.ideas||[];
   const fresh=ideas.filter(i=>i.status==="New");
-  return `<div class="card" style="margin-bottom:20px;border:1px solid ${fresh.length?"#fde68a":"#f1f5f9"};background:${fresh.length?"#fffdf5":"#fff"}">
-    <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#f59e0b">\u{1F4A1}</span> Ideas &amp; problems ${fresh.length?`<span class="pill" style="${IDEA_STYLE.New}">${fresh.length} new</span>`:""}</h2>
-    <div class="tiny muted" style="margin-bottom:12px">What the team sent from the lightbulb in the header.${ideas.length?` Mark one <b>Done</b> when you build it, then credit them in the changelog \u2014 that's what makes a second idea happen.`:""}</div>
-    ${ideas.length? `<div>${ideas.map(i=>`
+  const active=ideas.filter(i=>i.status!=="Done");
+  const done=ideas.filter(i=>i.status==="Done");
+  const row=i=>`
       <div style="padding:10px 0;border-bottom:1px solid #f1f5f9">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
           <span>${i.kind==="bug"?"\u{1F41B}":"\u{1F4A1}"}</span>
           <span style="font-weight:600;color:#334155;font-size:13px">${esc(i.submitted_by)}</span>
           <span class="tiny muted">${esc(fmtDateTime(i.created_at,i.created_at))}${i.context?" \u00b7 "+esc(i.context):""}${i.app_version?" \u00b7 v"+esc(i.app_version):""}</span>
           <span style="flex:1"></span>
+          ${i.status==="Done"&&i.done_version?`<span style="font-size:11px;font-weight:700;color:#166534;background:#dcfce7;padding:1px 8px;border-radius:999px;white-space:nowrap" title="The version this shipped in">shipped v${esc(i.done_version)}</span>`:""}
           <select class="sortsel" data-istatus="${i.id}" ${S.busy?"disabled":""}>${IDEA_STATUS.map(st=>`<option ${i.status===st?"selected":""}>${esc(st)}</option>`).join("")}</select>
           <button class="linkish" data-iremove="${i.id}" style="color:#dc2626" ${S.busy?"disabled":""}>Remove</button>
         </div>
         <div style="font-size:14px;color:#475569;white-space:pre-wrap">${esc(i.body)}</div>
-      </div>`).join("")}</div>`
+      </div>`;
+  return `<div class="card" style="margin-bottom:20px;border:1px solid ${fresh.length?"#fde68a":"#f1f5f9"};background:${fresh.length?"#fffdf5":"#fff"}">
+    <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#f59e0b">\u{1F4A1}</span> Ideas &amp; problems ${fresh.length?`<span class="pill" style="${IDEA_STYLE.New}">${fresh.length} new</span>`:""}</h2>
+    <div class="tiny muted" style="margin-bottom:12px">What the team sent from the lightbulb in the header.${ideas.length?` Mark one <b>Done</b> when you build it, then credit them in the changelog \u2014 that's what makes a second idea happen. Done ones tuck away below.`:""}</div>
+    ${ideas.length? `
+      <div>${active.length?active.map(row).join(""):`<div class="tiny muted" style="font-style:italic;padding:8px 0">No open ideas right now \u2014 you're all caught up. \u{1F389}</div>`}</div>
+      ${done.length?`<div style="margin-top:12px">
+        <button class="linkish" data-toggledone style="font-size:12px;color:#16a34a;font-weight:600">${S.showDoneIdeas?"\u25be":"\u25b8"} Done \u00b7 archived (${done.length})${S.showDoneIdeas?" \u2014 hide":" \u2014 show"}</button>
+        ${S.showDoneIdeas?`<div style="margin-top:6px;opacity:.72">${done.map(row).join("")}</div>`:""}
+      </div>`:""}`
     : `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing yet. The lightbulb sits in the header next to the version \u2014 on every screen, for everyone.</div>`}
   </div>`;
 }
@@ -2660,7 +2703,7 @@ function viewAdmin(){
 ${ideasCard()}
     <div class="card" style="margin-bottom:20px;border:1px solid #ede9fe;background:#faf9ff">
       <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#7c3aed;display:inline-flex">${I.clip}</span> Customer list</h2>
-      <div class="tiny muted" style="margin-bottom:12px">${(S.customers||[]).length} customer${(S.customers||[]).length===1?'':'s'} loaded for autocomplete. Upload a CSV — Name, Account #, Address 1, Address 2, City, State, Zip, Phone — to replace the whole list.</div>
+      <div class="tiny muted" style="margin-bottom:12px">${(S.customers||[]).length} customer${(S.customers||[]).length===1?'':'s'} loaded for autocomplete. Upload the <b style="color:#7c3aed">ARW All Customers</b> report (CSV) — Name, Account #, Address 1, Address 2, City, State, Zip, Phone, Category — to replace the whole list.</div>
       <div class="dropzone${S.pendingFile?' ready':''}" id="cust_drop">
         <input type="file" id="cust_file" accept=".csv,text/csv" style="display:none"/>
         ${S.pendingFile
@@ -2675,7 +2718,7 @@ ${ideasCard()}
     </div>
     <div class="card" style="margin-bottom:20px;border:1px solid #ffedd5;background:#fffcf8">
       <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:#ea580c;display:inline-flex">${I.clip}</span> Manufacturer list</h2>
-      <div class="tiny muted" style="margin-bottom:12px">${(S.manufacturers||[]).length? `${(S.manufacturers||[]).length} brands loaded — used by the Manufacturer dropdown on tech cases.` : `<span style="color:#dc2626;font-weight:600">None loaded</span> — the dropdown is using a built-in starter list until you upload yours.`} One column: the brand name.</div>
+      <div class="tiny muted" style="margin-bottom:12px">${(S.manufacturers||[]).length? `${(S.manufacturers||[]).length} brands loaded — used by the Manufacturer dropdown on tech cases.` : `<span style="color:#dc2626;font-weight:600">None loaded</span> — the dropdown is using a built-in starter list until you upload yours.`} Upload the <b style="color:#ea580c">ARW Inventory Vendors</b> report — one column: the brand name.</div>
       <div class="dropzone${S.pendingMfr?' ready':''}" id="mfr_drop" style="border-color:${S.pendingMfr?'#86efac':'#fed7aa'};background:${S.pendingMfr?'#f0fdf4':'#fffbf6'}">
         <input type="file" id="mfr_file" accept=".csv,text/csv" style="display:none"/>
         ${S.pendingMfr
@@ -2984,9 +3027,12 @@ function bind() {
     if(mins!==null && (isNaN(mins) || mins<0)){ toast("Minutes needs to be a number.",false); return; }
     const note=document.getElementById("te_note").value.trim()||null;
     const pub=document.getElementById("te_public").value.trim()||null;
+    const typeEl=document.getElementById("te_type");
+    const patch={ minutes:mins, note, public_summary:pub };
+    if(typeEl) patch.contact_type=typeEl.value;
     S.busy=true; render();
     try{
-      await sbPatch("cp_updates","id=eq."+id,{ minutes:mins, note, public_summary:pub });
+      await sbPatch("cp_updates","id=eq."+id,patch);
       logActivity("touch_edit","edited a touch");
       S.editTouchFull=null; toast("Touch updated."); S.busy=false; await load();
     }catch(e){ toast("Couldn't save the edit. Try again.",false); S.busy=false; render(); }
@@ -3013,10 +3059,12 @@ function bind() {
       await load({full:true});
     }catch(e){ toast("Couldn't send it. Did you run the ideas SQL?",false); S.busy=false; render(); }
   };
+  const tgd=document.querySelector("[data-toggledone]"); if(tgd) tgd.onclick=()=>{ S.showDoneIdeas=!S.showDoneIdeas; render(); };
   document.querySelectorAll("[data-istatus]").forEach(sel=>sel.onchange=async()=>{
     const i=(S.ideas||[]).find(x=>String(x.id)===sel.dataset.istatus); if(!i) return;
     S.busy=true; render();
-    try{ await sbPatch("cp_ideas","id=eq."+i.id,{ status:sel.value }); toast(esc(i.submitted_by)+"'s "+(i.kind==="bug"?"report":"idea")+" \u2192 "+sel.value+"."); S.busy=false; await load({full:true}); }
+    const patch = sel.value==="Done" ? { status:"Done", done_version:APP_VERSION } : { status:sel.value, done_version:null };
+    try{ await sbPatch("cp_ideas","id=eq."+i.id,patch); toast(esc(i.submitted_by)+"'s "+(i.kind==="bug"?"report":"idea")+" \u2192 "+sel.value+(sel.value==="Done"?" (v"+APP_VERSION+")":"")+"."); S.busy=false; await load({full:true}); }
     catch(e){ toast("Couldn't update it. Try again.",false); S.busy=false; render(); }
   });
   document.querySelectorAll("[data-iremove]").forEach(b=>b.onclick=async()=>{
@@ -3072,8 +3120,15 @@ function bind() {
   const asg=document.querySelector("[data-assign]"); if(asg) asg.onclick=()=>assignSelf(S.rows.find(x=>x.id===S.selectedId));
   const del=document.querySelector("[data-delete]"); if(del) del.onclick=()=>deleteCard(S.rows.find(x=>x.id===S.selectedId));
   const al=document.querySelector("[data-assign-lead]"); if(al) al.onchange=()=>assignLead(S.rows.find(x=>x.id===S.selectedId), al.value);
+  const dfu=document.getElementById("d_followup");
+  if(dfu) dfu.onchange=async()=>{
+    const r=S.rows.find(x=>x.id===S.selectedId); if(!r||readOnly()) return;
+    const v=dfu.value||null;
+    try{ await sbPatch("cp_requests","id=eq."+r.id,{ next_follow_up:v }); r.next_follow_up=v; toast(v?("Follow-up set for "+fmtDate(v)):"Follow-up cleared."); render(); }
+    catch(e){ toast("Couldn't save the follow-up date. Try again.",false); }
+  };
   const ph=document.getElementById("s_phone"); if(ph) ph.onblur=()=>{ ph.value=fmtPhone(ph.value); };
-  document.querySelectorAll("[data-dateset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.dateset); if(el) el.value=dateShortcut(b.dataset.datekey); });
+  document.querySelectorAll("[data-dateset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.dateset); if(el){ el.value=dateShortcut(b.dataset.datekey); el.dispatchEvent(new Event("change")); } });
   document.querySelectorAll("[data-minset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById("u_mins"); if(el) el.value=b.dataset.minset; });
   const smEl=document.getElementById("s_mins");
   if(smEl){
