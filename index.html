@@ -295,7 +295,28 @@ async function signOut(){
   S.authed=false; S.authEmail=null; S.persona=null;
   render();
 }
-const sbGet = async p => { const r = await fetch(SB_URL + "/" + p, { headers: H }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+// Refresh the access token from the stored refresh token (updates SB_TOKEN + storage).
+async function doRefresh(){
+  const saved = JSON.parse(localStorage.getItem("cp_session") || "null");
+  if(!saved || !saved.refresh_token) throw new Error("no refresh token");
+  const fresh = await authRefresh(saved.refresh_token);
+  saveSession(fresh);
+  return fresh;
+}
+// Every data request goes through here. If the token has expired (401), refresh once and retry —
+// so a card still saves even after the tab has sat idle for hours.
+async function sbFetch(url, opts){
+  opts = opts || {};
+  let r = await fetch(url, opts);
+  if(r.status === 401){
+    try{
+      await doRefresh();
+      r = await fetch(url, { ...opts, headers: { ...(opts.headers||{}), Authorization: authHeader() } });
+    }catch(_){ /* refresh failed — leave the 401 to surface as a normal error */ }
+  }
+  return r;
+}
+const sbGet = async p => { const r = await sbFetch(SB_URL + "/" + p, { headers: {...H} }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 async function sbGetAll(table, extra){
   const all=[]; const page=1000; let offset=0;
   while(true){
@@ -310,13 +331,34 @@ function logActivity(event, detail){
   if(typeof isPreviewing==="function" && isPreviewing()) return; // don't log actions taken while previewing
   try{ sbPost("cp_activity",{ actor:(S.persona&&S.persona.name)||"?", actor_role:(S.persona&&S.persona.type)||"?", event, detail:detail||null }).catch(()=>{}); }catch(_){}
 }
-const sbPost = async (t, b) => { const r = await fetch(SB_URL + "/" + t, { method:"POST", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
-const sbPatch = async (t, f, b) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"PATCH", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
-const sbDelete = async (t, f) => { const r = await fetch(SB_URL + "/" + t + "?" + f, { method:"DELETE", headers:H }); if (!r.ok) throw new Error(await r.text()); return true; };
+const sbPost = async (t, b) => { const r = await sbFetch(SB_URL + "/" + t, { method:"POST", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+const sbPatch = async (t, f, b) => { const r = await sbFetch(SB_URL + "/" + t + "?" + f, { method:"PATCH", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+const sbDelete = async (t, f) => { const r = await sbFetch(SB_URL + "/" + t + "?" + f, { method:"DELETE", headers:{...H} }); if (!r.ok) throw new Error(await r.text()); return true; };
+
+// Belt-and-suspenders: when someone returns to a tab that's been idle, refresh the token
+// up front (throttled) so their first action already has a live credential.
+let _lastRefresh = 0;
+async function proactiveRefresh(){
+  if(!S.authed) return;
+  if(Date.now() - _lastRefresh < 60000) return;
+  _lastRefresh = Date.now();
+  try{ await doRefresh(); }catch(_){}
+}
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) proactiveRefresh(); });
+window.addEventListener("focus", proactiveRefresh);
 
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.19", date:"2026-07-26", title:"Stays signed in, clearer cards", items:[
+    "Fixed saves failing after a tab sat idle for a while \u2014 Pulse now quietly refreshes your session in the background, so a card still saves even hours later",
+    "Log-a-touch now keeps your typing safe on your device until it successfully logs \u2014 if a save ever hiccups, your notes are still there when you come back",
+    "Dashboard cards now label both the Status (the stage) and the latest Touch type (the action), so the two never get mixed up" ] },
+  { v:"3.18", date:"2026-07-26", title:"Clearer actions and stages", items:[
+    "Touch types now read as plain actions with icons \u2014 \u{1F4DE} Phone call, \u{1F697} Site visit, \u2709\uFE0F Email, \u{1F4C4} Sent quote, \u2753 Question / research, \u{1F4DD} Note",
+    "The log form asks \u201CWhat did you do?\u201D (the action), kept separate from the card's stage",
+    "Card stages renamed so they no longer echo the actions: In progress, Quoting, Waiting on info \u2014 Contacted and Visited are now both \u201CIn progress\u201D",
+    "Nothing's lost: the touch history still shows exactly what each contact was" ] },
   { v:"3.17", date:"2026-07-26", title:"Polish across the board", items:[
     "Customer categories now show their full name everywhere (MF reads MultiFamily), and the badge sits in the card's top-right corner",
     "Set or change a follow-up date right on the card \u2014 pick a date or tap a chip and it saves instantly, no need to open Log a touch",
@@ -511,31 +553,50 @@ const isMF = t => /^(mf|multi)/i.test((t||"").trim());
 const ACTIONS = ["Call","Visit","Quote follow-up","Other"];
 // Sensible starting time for the first touch, by how the contact happened.
 const FIRST_MINS = { "Call":15, "Visit":30, "Quote follow-up":15, "Other":15 };
-const TOUCH_MAP = { "Call":"Contacted","Visit":"Visited","Email":"Contacted","Quote":"Quote pending","Needs more info":"Needs more info","Other":"Contacted" };
-const TOUCH_MAP_TECH = { "Call":"Contacted","Site visit":"Visited","Email":"Contacted","Waiting on manufacturer":"Needs more info","Needs more info":"Needs more info","Other":"Contacted" };
+const TOUCH_MAP = { "Phone call":"In progress","Site visit":"In progress","Email":"In progress","Sent quote":"Quoting","Question / research":"Waiting on info","Note":"In progress" };
+const TOUCH_MAP_TECH = { "Phone call":"In progress","Site visit":"In progress","Email":"In progress","Waiting on manufacturer":"Waiting on info","Question / research":"Waiting on info","Note":"In progress" };
+const TOUCH_ICON = { "Phone call":"\u{1F4DE}","Site visit":"\u{1F697}","Email":"\u2709\uFE0F","Sent quote":"\u{1F4C4}","Waiting on manufacturer":"\u23F3","Question / research":"\u2753","Note":"\u{1F4DD}","Internal support":"\u{1F6E0}\uFE0F" };
+const touchIcon = t => TOUCH_ICON[t] || "";
+// value = clean stored name; label = icon + name. Keeps stored data clean while the dropdown reads clearly.
+const touchTypeOptions = (r, current) => { const keys=Object.keys(touchMapFor(r||{})); if(current && !keys.includes(current)) keys.unshift(current); return keys.map(k=>`<option value="${esc(k)}" ${k===current?"selected":""}>${touchIcon(k)} ${esc(k)}</option>`).join(""); };
 const TOUCH_TYPES = Object.keys(TOUCH_MAP);
 const touchMapFor = r => isTech(r) ? TOUCH_MAP_TECH : TOUCH_MAP;
 const URGENCY = ["Low","Medium","High"];
+// --- Local draft safety net: keep unsaved Log-a-touch text on the device until it saves ---
+const TOUCH_DRAFT_FIELDS = ["u_type","u_next","u_mins","u_products","u_topic","u_note","u_public"];
+const touchDraftKey = id => "cp_draft_touch_" + id;
+function saveTouchDraft(id){
+  const g = f => { const el=document.getElementById(f); return el?el.value:""; };
+  const meaningful = ["u_note","u_public","u_products","u_topic"].some(f=>g(f).trim()) || g("u_mins").trim();
+  const d={}; TOUCH_DRAFT_FIELDS.forEach(f=>d[f]=g(f));
+  try{ if(meaningful) localStorage.setItem(touchDraftKey(id), JSON.stringify(d)); else localStorage.removeItem(touchDraftKey(id)); }catch(_){}
+}
+function restoreTouchDraft(id){
+  try{ const raw=localStorage.getItem(touchDraftKey(id)); if(!raw) return; const d=JSON.parse(raw);
+    TOUCH_DRAFT_FIELDS.forEach(f=>{ const el=document.getElementById(f); if(el && d[f]!=null && d[f]!=="") el.value=d[f]; });
+  }catch(_){}
+}
+function clearTouchDraft(id){ try{ localStorage.removeItem(touchDraftKey(id)); }catch(_){} }
+function hasTouchDraft(id){ try{ return !!localStorage.getItem(touchDraftKey(id)); }catch(_){ return false; } }
 const assigneeOptions = current => { const base=salespeopleList(); if(current && !base.includes(current)) base.unshift(current); return opts(base,current); };
-const STATUS_LIST = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost","Resolved","Unresolved","No action needed","Needs more info"];
-const OPEN_STATUSES = ["New","Assigned","Contacted","Visited","Quote pending","Needs more info"];
+const STATUS_LIST = ["New","Assigned","In progress","Quoting","Waiting on info","Won","Lost","Resolved","Unresolved","No action needed"];
+const OPEN_STATUSES = ["New","Assigned","In progress","Quoting","Waiting on info"];
 const isTech = r => (r && r.type)==="tech";
 const isFieldLevel = p => p && (p.type==="sales" || p.type==="tech");
 const isUpcomingVisit = r => r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) && r.next_follow_up && days(today(), r.next_follow_up) > 7;
-const STAGE_COLOR = { "New":"#0ea5e9","Assigned":"#6366f1","Contacted":"#f59e0b","Visited":"#14b8a6","Quote pending":"#8b5cf6","Won":"#10b981","Lost":"#f43f5e","Resolved":"#10b981","Unresolved":"#f43f5e","No action needed":"#94a3b8","Needs more info":"#f97316" };
+const STAGE_COLOR = { "New":"#0ea5e9","Assigned":"#6366f1","In progress":"#f59e0b","Quoting":"#8b5cf6","Won":"#10b981","Lost":"#f43f5e","Resolved":"#10b981","Unresolved":"#f43f5e","No action needed":"#94a3b8","Waiting on info":"#f97316" };
 const stageColor = s => STAGE_COLOR[s] || "#94a3b8";
 const STATUS_STYLE = {
   "New":"background:#e0f2fe;color:#075985;border-color:#bae6fd",
   "Assigned":"background:#e0e7ff;color:#3730a3;border-color:#c7d2fe",
-  "Contacted":"background:#fef3c7;color:#92400e;border-color:#fde68a",
-  "Visited":"background:#ccfbf1;color:#115e59;border-color:#99f6e4",
-  "Quote pending":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe",
+  "In progress":"background:#fef3c7;color:#92400e;border-color:#fde68a",
+  "Quoting":"background:#ede9fe;color:#5b21b6;border-color:#ddd6fe",
   "Won":"background:#dcfce7;color:#166534;border-color:#bbf7d0",
   "Lost":"background:#ffe4e6;color:#9f1239;border-color:#fecdd3",
   "Resolved":"background:#dcfce7;color:#166534;border-color:#bbf7d0",
   "Unresolved":"background:#ffe4e6;color:#9f1239;border-color:#fecdd3",
   "No action needed":"background:#f1f5f9;color:#475569;border-color:#e2e8f0",
-  "Needs more info":"background:#ffedd5;color:#9a3412;border-color:#fed7aa",
+  "Waiting on info":"background:#ffedd5;color:#9a3412;border-color:#fed7aa",
 };
 const ROLE_LABEL = { employee:"Counter", sales:"Salesperson", tech:"Tech Support", manager:"Manager", admin:"Admin", viewer:"View only" };
 const ROLES = ["employee","sales","tech","manager","admin","viewer"];
@@ -854,7 +915,7 @@ function sortList(list){
 function sortSelect(){ return `<select data-sort class="sortsel">${SORTS.map(([v,l])=>`<option value="${v}" ${S.sort===v?"selected":""}>Sort: ${l}</option>`).join("")}</select>`; }
 function searchBar(ph){ return `<div class="search"><span class="si">${I.search}</span><input data-search="1" id="q_search" value="${esc(S.search)}" placeholder="${esc(ph)}" autocomplete="off"/>${S.search?`<button class="clr" data-clearsearch="1">&times;</button>`:''}</div>`; }
 function stageLegend(){
-  const seq = ["New","Assigned","Contacted","Visited","Quote pending","Won","Lost"];
+  const seq = ["New","Assigned","In progress","Quoting","Won","Lost"];
   return `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px">${seq.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><span style="width:10px;height:10px;border-radius:2px;background:${stageColor(s)}"></span>${esc(s)}</span>`).join("")}</div>`;
 }
 
@@ -903,10 +964,10 @@ const pill = st => `<span class="pill" style="${STATUS_STYLE[st]||STATUS_STYLE.N
 // Quick actions: one tap = status + today's date + auto follow-up date + a logged note.
 const bizDays = (from,n) => { const d=new Date(from); let a=0; while(a<n){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0&&w!==6)a++; } return d.toISOString().slice(0,10); };
 const QUICK = {
-  vm:{status:"Contacted",note:"Left a voicemail",follow:2,mins:5},
-  email:{status:"Contacted",note:"Sent an email",follow:2,mins:5},
-  text:{status:"Contacted",note:"Sent a text",follow:2,mins:3},
-  stopped:{status:"Contacted",note:"Stopped by — customer unavailable",follow:2,mins:30},
+  vm:{status:"In progress",note:"Left a voicemail",follow:2,mins:5},
+  email:{status:"In progress",note:"Sent an email",follow:2,mins:5},
+  text:{status:"In progress",note:"Sent a text",follow:2,mins:3},
+  stopped:{status:"In progress",note:"Stopped by — customer unavailable",follow:2,mins:30},
   won:{status:"Won",note:"Marked won",follow:0,mins:0},
   lost:{status:"Lost",note:"Marked lost",follow:0,mins:0},
   resolved:{status:"Resolved",note:"Marked resolved",follow:0,mins:0},
@@ -1335,7 +1396,7 @@ function groupedOpts(groups, sel){
 // happen via quick actions, so they're not selectable here — but if a lead is
 // already at one of those (or New), we show it as a locked "current" marker.
 function statusOptions(current){
-  const forward = ["Assigned","Contacted","Visited","Quote pending","Needs more info"];
+  const forward = ["Assigned","In progress","Quoting","Waiting on info"];
   const head = forward.includes(current) ? "" : `<option value="${esc(current)}" selected disabled>${esc(stLabel(current))} (current)</option>`;
   return head + forward.map(s=>`<option ${s===current?"selected":""}>${esc(s)}</option>`).join("");
 }
@@ -1361,7 +1422,7 @@ function viewSubmit() {
     S.persona.type==="sales" ? CATEGORY_GROUPS.filter(g=>g[0]!=="Sales")
     : S.persona.type==="tech" ? CATEGORY_GROUPS.filter(g=>g[0]!=="Technical")
     : CATEGORY_GROUPS;
-  const FIELD_STATUSES = ["Contacted","Visited","Quote pending","Needs more info",tech?"Resolved":"Won"];
+  const FIELD_STATUSES = ["In progress","Quoting","Waiting on info",tech?"Resolved":"Won"];
 
   const productBlock = (collapsed) => {
     const inner = `
@@ -1397,7 +1458,7 @@ function viewSubmit() {
         ${field&&canAssign?`<label class="f"><span class="lbl">Assign to <span style="color:#94a3b8;font-weight:400">— who follows up</span></span><select id="s_owner">${assigneeOptions(S.persona.name)}</select></label>`:""}
         ${isLead?`<label class="f"><span class="lbl">Who should chase this? <span class="req">*</span></span><select id="s_owner"><option value="">Choose someone…</option>${opts(leadAssignees())}</select>${leadAssignees().length?"":`<div class="tiny" style="color:#dc2626;margin-top:4px">Nobody to refer to yet — add someone on the Manager view.</div>`}</label>
         <label class="f"><span class="lbl">Chase it by <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="s_next"/>${dateChips("s_next")}</label>`:""}
-        ${field?`<label class="f"><span class="lbl">Current status <span class="req">*</span></span><select id="s_status">${opts(FIELD_STATUSES,"Visited")}</select></label>
+        ${field?`<label class="f"><span class="lbl">Current status <span class="req">*</span></span><select id="s_status">${opts(FIELD_STATUSES,"In progress")}</select></label>
         <label class="f"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="s_mins" min="0" value="30"/>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${[15,30,45,60,90].map(m=>`<button type="button" class="datechip" data-sminset="${m}">${m}m</button>`).join("")}</div></label>
         <label class="f"${canAssign?"":` style="grid-column:1/-1"`}><span class="lbl">Next follow-up <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input type="date" id="s_next"/>${dateChips("s_next")}</label>`:""}
@@ -1475,7 +1536,7 @@ function viewSubmit() {
 
   const internalCard = () => {
     const team = (S.people||[]).filter(p=>p.active).map(p=>p.name);
-    const INT_STATUS = ["Resolved","Contacted","Needs more info"];
+    const INT_STATUS = ["Resolved","In progress","Waiting on info"];
     const INT_CATS = ["Technical support","Product question","Needs training","Other"];
     return `
     <div class="card">
@@ -1607,15 +1668,18 @@ function salesCard(r){
   const stale=OPEN_STATUSES.includes(r.status)&&age>5;
   const hasNote=commentsFor(r.id).some(isMgrNote);
   const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
+  const _tt=(S.updates||[]).filter(u=>u.request_id===r.id && u.contact_type);
+  const last=_tt.length?_tt.reduce((a,b)=>((b.created_at||b.update_date||"")>(a.created_at||a.update_date||"")?b:a)):null;
   return `<button class="subcard${hi?' hipri':''}" data-open="${r.id}" style="border-top:4px solid ${stageColor(r.status)}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
       <div class="cn">${esc(r.customer_name)}</div>
       ${typeBadge(r)}
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
-      ${pill(r.status)}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <b style="font-size:12px;color:#64748b">Status:</b>${pill(r.status)}
       <span class="urg"><span class="udot" style="background:${r.urgency==='High'?'#f43f5e':r.urgency==='Medium'?'#f59e0b':'#94a3b8'}"></span>${esc(r.urgency)}</span>
     </div>
+    ${last?`<div class="kv"><b>Touch type:</b> ${touchIcon(last.contact_type)} ${esc(last.contact_type)}${last.update_date?` · ${fmtDate(last.update_date)}`:''}</div>`:''}
     <div style="display:flex;flex-wrap:wrap;gap:5px">
       ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
       ${techBadge(r)}
@@ -1682,7 +1746,7 @@ function viewMine() {
 
 function viewEmployeeDetail() {
   const r = S.rows.find(x=>x.id===S.selectedId); if(!r) return viewMine();
-  const steps = ["New","Assigned","Contacted","Won"];
+  const steps = ["New","Assigned","In progress","Won"];
   const idx = r.status==="Lost"?3:(steps.indexOf(r.status)>=0?steps.indexOf(r.status):0);
   const track = steps.map((st,i)=>{
     const on = i<=idx;
@@ -2133,7 +2197,7 @@ function viewSalesDetail() {
         <div class="fsection fs-touch">
           <div class="fsection-h"><span class="fsdot" style="background:#2563eb"></span>The touch</div>
           <div class="grid2">
-            <label class="f"><span class="lbl">Touch type <span style="color:#94a3b8;font-weight:400">— sets the stage</span></span><select id="u_type">${opts(Object.keys(touchMapFor(r)),"Call")}</select></label>
+            <label class="f"><span class="lbl">What did you do? <span style="color:#94a3b8;font-weight:400">— the action</span></span><select id="u_type">${touchTypeOptions(r,"Phone call")}</select></label>
             <label class="f"><span class="lbl">Next follow-up</span><input type="date" id="u_next" value="${esc(r.next_follow_up||'')}"/>${dateChips("u_next")}</label>
           </div>
           <label class="f" style="margin-top:12px"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span>
@@ -2162,6 +2226,7 @@ function viewSalesDetail() {
           <label class="f" style="margin-top:12px"><span class="lbl">Public summary <span style="color:#94a3b8;font-weight:400">— the submitter sees this</span></span><textarea id="u_public" style="min-height:70px" placeholder="e.g. Reached out and set a meeting for next week to walk through the RTU options."></textarea></label>
         </div>
         <button class="btn block" id="u_save" style="margin-top:16px" ${S.busy?'disabled':''}>${S.busy?'Logging…':'Log touch'}</button>
+        ${hasTouchDraft(r.id)?`<div class="tiny" style="text-align:center;color:#0d9488;margin-top:8px">\u2712\uFE0F Your text is saved on this device until it logs \u2014 you won't lose it.</div>`:""}
       </div>
     </div>`}
   </div>
@@ -2196,7 +2261,7 @@ function touchTimeline(u){
   if(S.editTouchFull===u.id){
     return `<div class="touch" style="border-left-color:#2563eb;background:#f7f9ff">
       <div class="tiny" style="font-weight:700;color:#1e40af;margin-bottom:8px">Editing touch · ${esc(fmtDateTime(u.created_at,u.update_date))}${u.author?' · '+esc(u.author):''}</div>
-      ${u.contact_type?`<label class="f"><span class="lbl">Touch type <span style="color:#94a3b8;font-weight:400">— what kind of contact this was</span></span><select id="te_type">${(()=>{ const rr=(S.rows||[]).find(x=>x.id===u.request_id); const keys=Object.keys(touchMapFor(rr||{})); if(!keys.includes(u.contact_type)) keys.unshift(u.contact_type); return keys.map(k=>`<option ${k===u.contact_type?"selected":""}>${esc(k)}</option>`).join(""); })()}</select></label>`:""}
+      ${u.contact_type?`<label class="f"><span class="lbl">What did you do? <span style="color:#94a3b8;font-weight:400">— the action</span></span><select id="te_type">${touchTypeOptions((S.rows||[]).find(x=>x.id===u.request_id), u.contact_type)}</select></label>`:""}
       <label class="f" style="margin-top:8px"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span><input type="number" id="te_mins" min="0" value="${esc(u.minutes||"")}"/></label>
       <label class="f" style="margin-top:8px"><span class="lbl">Internal note <span style="color:#94a3b8;font-weight:400">— sales only</span></span><textarea id="te_note" style="min-height:60px">${esc(u.note||"")}</textarea></label>
       <label class="f" style="margin-top:8px"><span class="lbl">Public summary <span style="color:#94a3b8;font-weight:400">— the submitter sees this</span></span><textarea id="te_public" style="min-height:60px">${esc(u.public_summary||"")}</textarea></label>
@@ -2217,7 +2282,7 @@ function touchTimeline(u){
   if(u.contact_type){
     return `<div class="touch">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span class="ttype">${esc(u.contact_type)}</span>${u.status?pill(u.status):""}
+        <span class="ttype">${touchIcon(u.contact_type)} ${esc(u.contact_type)}</span>${u.status?pill(u.status):""}
         <span class="tiny muted">${esc(fmtDateTime(u.created_at,u.update_date))}${u.author?' · '+esc(u.author):''}</span>
       </div>
       ${u.note?`<div style="font-size:14px;color:#334155;margin-top:5px">${esc(u.note)}</div>`:""}
@@ -3307,6 +3372,10 @@ function bind() {
   };
 
   const us=document.getElementById("u_save");
+  if(us){
+    restoreTouchDraft(S.selectedId);
+    TOUCH_DRAFT_FIELDS.forEach(f=>{ const el=document.getElementById(f); if(el){ const h=()=>saveTouchDraft(S.selectedId); el.addEventListener("input",h); el.addEventListener("change",h); } });
+  }
   if(us) us.onclick=async()=>{
     const r=S.rows.find(x=>x.id===S.selectedId);
     const gv=id=>document.getElementById(id).value.trim();
@@ -3330,7 +3399,7 @@ function bind() {
       // 2. update the lead's current snapshot (ownership is set separately, at the lead level)
       await sbPatch("cp_requests","id=eq."+r.id,{ status, next_follow_up:next,
         ...(pub?{public_summary:pub}:{}), ...(products?{products_discussed:products}:{}), first_touched_at, last_action_date:today() });
-      logActivity("touch","logged a touch on "+(r.customer_name||"")); toast("Touch logged."); S.busy=false; await load();
+      logActivity("touch","logged a touch on "+(r.customer_name||"")); clearTouchDraft(r.id); toast("Touch logged."); S.busy=false; await load();
     }catch(e){ toast("Couldn't log the touch. Try again.",false); S.busy=false; render(); }
   };
 }
