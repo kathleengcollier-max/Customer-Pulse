@@ -5,6 +5,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Customer Pulse — Legacy Group</title>
+<meta name="app-version" content="3.26">
+<meta name="last-updated" content="2026-08-15">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%2232%22%20y2%3D%2232%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23E1263A%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23B10D26%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpath%20d%3D%22M2%2017%20H12%20L15%207%20L19%2026%20L22%2012%20L24%2017%20H30%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2217%22%20r%3D%221.7%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E">
 <link rel="alternate icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
@@ -335,6 +337,23 @@ const sbPost = async (t, b) => { const r = await sbFetch(SB_URL + "/" + t, { met
 const sbPatch = async (t, f, b) => { const r = await sbFetch(SB_URL + "/" + t + "?" + f, { method:"PATCH", headers:{...H, Prefer:"return=representation"}, body:JSON.stringify(b) }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
 const sbDelete = async (t, f) => { const r = await sbFetch(SB_URL + "/" + t + "?" + f, { method:"DELETE", headers:{...H} }); if (!r.ok) throw new Error(await r.text()); return true; };
 
+// --- App Catalog central ideas board ---
+// A SEPARATE Supabase project (not this app's). Anon, insert-only RPC: it can submit, but
+// cannot read anything back. Best-effort — a failure here never blocks the local idea save.
+const CATALOG_URL = "https://kyzzaywlmoohudzynnzq.supabase.co";
+const CATALOG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5enpheXdsbW9vaHVkenlubnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MzE4OTcsImV4cCI6MjEwMjIwNzg5N30.KYEI2WeSURPPIyyNUmCvgrqdBTTEIfft9rtrvczeBmU";
+async function sendIdeaToCatalog(body, submittedBy){
+  try{
+    const r = await fetch(CATALOG_URL + "/rest/v1/rpc/submit_idea", {
+      method:"POST",
+      headers:{ apikey:CATALOG_KEY, Authorization:"Bearer "+CATALOG_KEY, "Content-Type":"application/json", "Content-Profile":"catalog" },
+      body:JSON.stringify({ p_app_tag:"L815", p_body:body, p_submitted_by:submittedBy||null })
+    });
+    if(!r.ok) return null;
+    return await r.json().catch(()=>null);
+  }catch(_){ return null; }
+}
+
 // Belt-and-suspenders: when someone returns to a tab that's been idle, refresh the token
 // up front (throttled) so their first action already has a live credential.
 let _lastRefresh = 0;
@@ -350,6 +369,38 @@ window.addEventListener("focus", proactiveRefresh);
 // ---- Constants --------------------------------------------------------
 const BRANCHES = ["Anaheim","Laguna Hills","Long Beach","Santa Ana"];
 const CHANGELOG = [
+  { v:"3.26", date:"2026-07-26", title:"Better oversight on Pulse", items:[
+    "Pulse now shows week-over-week trends \u2014 opened, closed, response time, and win rate, each with a green/red direction arrow",
+    "Rep scorecards: each person's current load plus touches, closes and wins over the last 30 days",
+    "\u201CStuck in a stage\u201D surfaces cards sitting in the same stage 14+ days \u2014 the pipeline bottlenecks",
+    "A first-touch SLA target (set in Admin) with a live hit-rate on Pulse" ] },
+  { v:"3.25", date:"2026-07-26", title:"Fewer taps on every card", items:[
+    "New \u26A1 Quick log right on a dashboard card \u2014 log a call or note without opening the card",
+    "One-tap note phrases (\u201CLeft voicemail\u201D, \u201CSent quote \u2014 awaiting decision\u201D\u2026) when you log a touch",
+    "Logging a touch now suggests a next follow-up (+3 business days), so cards stop landing in the no-follow-up pile",
+    "Submitting for a customer who already has an open card warns you first, so you don't create a duplicate" ] },
+  { v:"3.24", date:"2026-07-26", title:"Sharper signals, faster at scale", items:[
+    "Overdue follow-ups are now tiered by how late they are, and open cards never touched yet show an \u201CAwaiting 1st touch\u201D flag \u2014 on cards, the dashboard, and Pulse",
+    "Won and Lost cards can capture a quick \u201Cwhy?\u201D, and the Outcomes report now breaks down the top reasons on each side",
+    "Under the hood: database indexes so the board stays fast as activity grows, and the activity log now loads only when you open its tab" ] },
+  { v:"3.23", date:"2026-07-26", title:"Smarter attention and a team Pulse", items:[
+    "\u201CAging\u201D now counts days since a card was last worked, not since it was created \u2014 so working a card resets its clock and actively-handled cards stop nagging",
+    "Attention is tiered \u2014 Needs a nudge, Going cold, and Cold \u2014 so only the truly neglected cards stand out (thresholds adjustable in Admin \u2192 Attention & aging)",
+    "Cards with a future follow-up date count as scheduled, not aging",
+    "New Cold-cards review: one-tap Close (\u2192 No action needed) or Snooze a week",
+    "Unanswered manager notes now surface everywhere they should \u2014 a dashboard box, the manager's Needs-attention list, and a longest-waiting list in Pulse",
+    "New Pulse tab for managers and admins \u2014 throughput, aging spread, response time, and workload by person" ] },
+  { v:"3.22", date:"2026-07-26", title:"Security tune-up", items:[
+    "Strengthened the database so only signed-in staff can reach any data",
+    "Admins can now sign everyone out on every device in one tap (Admin \u2192 Security) \u2014 handy if a laptop goes missing or someone leaves",
+    "You may be asked to sign in again once \u2014 that's just the refresh, nothing's wrong" ] },
+  { v:"3.21", date:"2026-07-26", title:"Search looks inside the notes", items:[
+    "Search now also looks through the write-up and every touch note \u2014 not just the customer name, account, and rep",
+    "When a match is found in the text, the card shows a highlighted snippet telling you exactly where it turned up" ] },
+  { v:"3.20", date:"2026-07-26", title:"New touch type: Showroom visit", items:[
+    "Added \u{1F3EC} Showroom visit \u2014 for when a customer comes in to us, as opposed to \u{1F697} Site visit (we go out to them)",
+    "Available to sales and tech support; it moves the card to In progress like the other contacts" ],
+    thanks:["Whitney"] },
   { v:"3.19", date:"2026-07-26", title:"Stays signed in, clearer cards", items:[
     "Fixed saves failing after a tab sat idle for a while \u2014 Pulse now quietly refreshes your session in the background, so a card still saves even hours later",
     "Log-a-touch now keeps your typing safe on your device until it successfully logs \u2014 if a save ever hiccups, your notes are still there when you come back",
@@ -553,14 +604,17 @@ const isMF = t => /^(mf|multi)/i.test((t||"").trim());
 const ACTIONS = ["Call","Visit","Quote follow-up","Other"];
 // Sensible starting time for the first touch, by how the contact happened.
 const FIRST_MINS = { "Call":15, "Visit":30, "Quote follow-up":15, "Other":15 };
-const TOUCH_MAP = { "Phone call":"In progress","Site visit":"In progress","Email":"In progress","Sent quote":"Quoting","Question / research":"Waiting on info","Note":"In progress" };
-const TOUCH_MAP_TECH = { "Phone call":"In progress","Site visit":"In progress","Email":"In progress","Waiting on manufacturer":"Waiting on info","Question / research":"Waiting on info","Note":"In progress" };
-const TOUCH_ICON = { "Phone call":"\u{1F4DE}","Site visit":"\u{1F697}","Email":"\u2709\uFE0F","Sent quote":"\u{1F4C4}","Waiting on manufacturer":"\u23F3","Question / research":"\u2753","Note":"\u{1F4DD}","Internal support":"\u{1F6E0}\uFE0F" };
+const TOUCH_MAP = { "Phone call":"In progress","Site visit":"In progress","Showroom visit":"In progress","Email":"In progress","Sent quote":"Quoting","Question / research":"Waiting on info","Note":"In progress" };
+const TOUCH_MAP_TECH = { "Phone call":"In progress","Site visit":"In progress","Showroom visit":"In progress","Email":"In progress","Waiting on manufacturer":"Waiting on info","Question / research":"Waiting on info","Note":"In progress" };
+const TOUCH_ICON = { "Phone call":"\u{1F4DE}","Site visit":"\u{1F697}","Showroom visit":"\u{1F3EC}","Email":"\u2709\uFE0F","Sent quote":"\u{1F4C4}","Waiting on manufacturer":"\u23F3","Question / research":"\u2753","Note":"\u{1F4DD}","Internal support":"\u{1F6E0}\uFE0F" };
 const touchIcon = t => TOUCH_ICON[t] || "";
 // value = clean stored name; label = icon + name. Keeps stored data clean while the dropdown reads clearly.
 const touchTypeOptions = (r, current) => { const keys=Object.keys(touchMapFor(r||{})); if(current && !keys.includes(current)) keys.unshift(current); return keys.map(k=>`<option value="${esc(k)}" ${k===current?"selected":""}>${touchIcon(k)} ${esc(k)}</option>`).join(""); };
 const TOUCH_TYPES = Object.keys(TOUCH_MAP);
 const touchMapFor = r => isTech(r) ? TOUCH_MAP_TECH : TOUCH_MAP;
+// #6 One-tap note phrases — the notes people write over and over.
+const NOTE_PHRASES = ["Left voicemail","Spoke with customer","Sent quote \u2014 awaiting decision","Emailed info","Dropped by / site visit","Not interested right now","Follow up next week"];
+function notePhrases(target){ return `<div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px">${NOTE_PHRASES.map(p=>`<button type="button" class="phrasechip" data-notephrase="${target}" data-phrase="${esc(p)}" style="font-size:11px;padding:3px 9px;border:1px solid #e2e8f0;border-radius:999px;background:#f8fafc;color:#475569;cursor:pointer">${esc(p)}</button>`).join("")}</div>`; }
 const URGENCY = ["Low","Medium","High"];
 // --- Local draft safety net: keep unsaved Log-a-touch text on the device until it saves ---
 const TOUCH_DRAFT_FIELDS = ["u_type","u_next","u_mins","u_products","u_topic","u_note","u_public"];
@@ -578,9 +632,75 @@ function restoreTouchDraft(id){
 }
 function clearTouchDraft(id){ try{ localStorage.removeItem(touchDraftKey(id)); }catch(_){} }
 function hasTouchDraft(id){ try{ return !!localStorage.getItem(touchDraftKey(id)); }catch(_){ return false; } }
+// Generic local-draft net for other forms (submit reason, internal support, idea box).
+const draftKey = name => "cp_draft_" + name;
+function draftSave(name, fields, requiredAny){
+  const g = f => { const el=document.getElementById(f); return el?el.value:""; };
+  const meaningful = (requiredAny||fields).some(f=>g(f).trim());
+  const d={}; fields.forEach(f=>d[f]=g(f));
+  try{ if(meaningful) localStorage.setItem(draftKey(name), JSON.stringify(d)); else localStorage.removeItem(draftKey(name)); }catch(_){}
+}
+function draftRestore(name, fields){
+  try{ const raw=localStorage.getItem(draftKey(name)); if(!raw) return; const d=JSON.parse(raw);
+    fields.forEach(f=>{ const el=document.getElementById(f); if(el && d[f]!=null && d[f]!=="") el.value=d[f]; }); }catch(_){}
+}
+function draftWire(name, fields, requiredAny){
+  draftRestore(name, fields);
+  fields.forEach(f=>{ const el=document.getElementById(f); if(el){ const h=()=>draftSave(name,fields,requiredAny); el.addEventListener("input",h); el.addEventListener("change",h); } });
+}
+function draftClear(name){ try{ localStorage.removeItem(draftKey(name)); }catch(_){} }
+function draftHas(name){ try{ return !!localStorage.getItem(draftKey(name)); }catch(_){ return false; } }
 const assigneeOptions = current => { const base=salespeopleList(); if(current && !base.includes(current)) base.unshift(current); return opts(base,current); };
 const STATUS_LIST = ["New","Assigned","In progress","Quoting","Waiting on info","Won","Lost","Resolved","Unresolved","No action needed"];
 const OPEN_STATUSES = ["New","Assigned","In progress","Quoting","Waiting on info"];
+// --- Aging model: measure inactivity from the last time a card was actually WORKED, not created ---
+const AGING_DEFAULTS = { nudge:7, cooling:14, cold:30 };
+function agingThresholds(){ const s=(S.settings&&S.settings.aging)||{}; return { nudge:+s.nudge||AGING_DEFAULTS.nudge, cooling:+s.cooling||AGING_DEFAULTS.cooling, cold:+s.cold||AGING_DEFAULTS.cold }; }
+function lastWorked(r){ return r.last_action_date || r.first_touched_at || r.submitted_at; }
+function daysIdle(r){ return days(lastWorked(r), today()); }
+const AGING_TIERS = {
+  cold:    { label:"Cold \u2014 review", pill:"Cold",       bg:"#fee2e2", text:"#991b1b" },
+  cooling: { label:"Going cold",         pill:"Going cold", bg:"#ffedd5", text:"#9a3412" },
+  nudge:   { label:"Needs a nudge",      pill:"Nudge",      bg:"#fef9c3", text:"#854d0e" },
+};
+// Returns the aging tier for an open, un-parked card, or null. A future follow-up = parked on purpose.
+function agingTier(r){
+  if(!OPEN_STATUSES.includes(r.status)) return null;
+  if(r.source==="Recurring visit") return null;
+  if(r.next_follow_up && r.next_follow_up > today()) return null;
+  const t=agingThresholds(), d=daysIdle(r);
+  if(d>=t.cold)    return { key:"cold",    days:d, ...AGING_TIERS.cold };
+  if(d>=t.cooling) return { key:"cooling", days:d, ...AGING_TIERS.cooling };
+  if(d>=t.nudge)   return { key:"nudge",   days:d, ...AGING_TIERS.nudge };
+  return null;
+}
+function agingBadge(r){ const t=agingTier(r); return t?`<span class="aging" style="color:${t.text};background:${t.bg};padding:1px 8px;border-radius:999px">${I.warn}${t.days}d idle \u00b7 ${t.pill}</span>`:""; }
+// #3 Overdue follow-ups, tiered by how late
+const OVERDUE_TIERS = [ [11,"#991b1b","#fee2e2"], [4,"#9a3412","#ffedd5"], [1,"#854d0e","#fef9c3"] ];
+function overdueBadge(r){
+  if(!OPEN_STATUSES.includes(r.status) || !r.next_follow_up || r.next_follow_up >= today()) return "";
+  const late=days(r.next_follow_up, today());
+  const [,tx,bg]=OVERDUE_TIERS.find(([d])=>late>=d)||OVERDUE_TIERS[OVERDUE_TIERS.length-1];
+  return `<span class="aging" style="color:${tx};background:${bg};padding:1px 8px;border-radius:999px">${I.warn}${late}d overdue</span>`;
+}
+// #4 Open cards that have never been touched at all — a first-response signal
+function neverTouched(r){ return OPEN_STATUSES.includes(r.status) && !r.first_touched_at && r.source!=="Recurring visit"; }
+function firstTouchBadge(r){
+  if(!neverTouched(r)) return "";
+  const wait=days(r.submitted_at, today());
+  return `<span class="aging" style="color:#fff;background:${wait>=1?'#dc2626':'#f59e0b'};padding:1px 8px;border-radius:999px">${I.warn}Awaiting 1st touch${wait?` \u00b7 ${wait}d`:''}</span>`;
+}
+// One prioritized flag per card: first-touch > overdue > idle-aging.
+function attentionBadge(r){ return firstTouchBadge(r) || overdueBadge(r) || agingBadge(r); }
+// #6 First-response SLA target (business-ish days, simple calendar days here)
+function slaTarget(){ const v=S.settings&&S.settings.sla&&S.settings.sla.firstTouchDays; return v>0?+v:1; }
+// #5 How long a card has sat in its CURRENT stage (from the last touch that set this status)
+function stageSince(r){
+  const ups=(S.updates||[]).filter(u=>u.request_id===r.id && u.status===r.status);
+  if(ups.length){ const last=ups.reduce((a,b)=>((b.created_at||b.update_date||"")>(a.created_at||a.update_date||"")?b:a)); return last.update_date || (last.created_at||"").slice(0,10) || r.last_action_date || r.submitted_at; }
+  return r.last_action_date || r.submitted_at;
+}
+function daysInStage(r){ return days(stageSince(r), today()); }
 const isTech = r => (r && r.type)==="tech";
 const isFieldLevel = p => p && (p.type==="sales" || p.type==="tech");
 const isUpcomingVisit = r => r.source==="Recurring visit" && OPEN_STATUSES.includes(r.status) && r.next_follow_up && days(today(), r.next_follow_up) > 7;
@@ -717,6 +837,7 @@ async function load(opts) {
       safe(sbGetAll("cp_updates","&order=created_at.asc"), S.updates||[]),
       safe(sbGet("cp_comments?select=*&order=created_at.asc"), S.comments||[]),
       safe(sbGet("cp_recurring?select=*&order=next_due.asc"), S.recurring||[]),
+      safe(sbGet("cp_settings?select=key,value"), S._settingsRaw||[]),
     ]);
     const ref = full ? Promise.all([
       safe(sbGetAll("cp_customers","&order=name.asc"), S.customers||[]),
@@ -725,7 +846,7 @@ async function load(opts) {
       safe(sbGet("cp_ideas?select=*&order=created_at.desc"), S.ideas||[]),
     ]) : null;
     // Only the admin ever looks at the activity log — nobody else pays for it.
-    const act = (S.persona && S.persona.type==="admin")
+    const act = (S.persona && S.persona.type==="admin" && S.tab==="activity")
       ? safe(sbGet("cp_activity?select=*&order=created_at.desc&limit=500"), S.activity||[])
       : null;
     // My dismissed-ticket acknowledgements (for the "new work" banner).
@@ -733,8 +854,10 @@ async function load(opts) {
       ? safe(sbGet("cp_seen?select=request_id&person_name=eq."+encodeURIComponent(S.persona.name)), null)
       : null;
 
-    const [reqs, ups, comments, recurring] = await core;
+    const [reqs, ups, comments, recurring, settingsRows] = await core;
     S.rows = reqs; S.updates = ups; S.comments = comments; S.recurring = recurring; S.conn = "live";
+    S._settingsRaw = settingsRows||[];
+    S.settings = (settingsRows||[]).reduce((m,r)=>{ m[r.key]=r.value; return m; },{});
     if(ref){
       const [customers, manufacturers, people, ideas] = await ref;
       S.customers = customers; S.manufacturers = manufacturers; S.people = people; S.ideas = ideas;
@@ -865,6 +988,8 @@ function managerNoteData(who, name){
 }
 function noteStatus(id){ const cs=commentsFor(id); const m=cs.filter(isMgrNote); if(!m.length) return "none"; const last=m[m.length-1]; return cs.some(c=>!isMgrNote(c) && c.created_at>last.created_at) ? "addressed" : "needs"; }
 function cardsWithNotes(){ return S.rows.filter(r=>commentsFor(r.id).some(isMgrNote)).map(r=>({r, status:noteStatus(r.id), last:latestMgrNote(r.id)})); }
+// Cards whose latest manager note has no reply yet, with how many days it's been waiting.
+function unansweredNotes(){ return cardsWithNotes().filter(x=>x.status==="needs").map(x=>({ ...x, wait: x.last?days(x.last.created_at.slice(0,10), today()):0 })).sort((a,b)=>b.wait-a.wait); }
 function noteBadge(status, persp){ if(status==="needs") return persp==="sales"?`<span class="nb nb-need">Needs your reply</span>`:`<span class="nb nb-wait">Awaiting reply</span>`; return `<span class="nb nb-done">Replied</span>`; }
 function noteRow(x, persp){ const {r,status,last}=x; return `<button class="dayrow" data-noteopen="${r.id}">
     <span class="cdot" style="background:${stageColor(r.status)};margin-top:5px"></span>
@@ -874,7 +999,39 @@ function noteRow(x, persp){ const {r,status,last}=x; return `<button class="dayr
       <div class="tiny muted" style="margin-top:2px">${esc(r.assigned_to||'Unassigned')} · ${esc(fmtDateTime(last.created_at))}</div>
     </div>
   </button>`; }
-const matchSearch = (r,q) => { if(!q) return true; q=q.toLowerCase(); return [r.customer_name,r.account_number,r.contact_name,r.assigned_to,r.branch].some(v=>(v||"").toLowerCase().includes(q)); };
+const matchSearch = (r,q) => {
+  if(!q) return true; q=q.toLowerCase();
+  const base=[r.customer_name,r.account_number,r.contact_name,r.assigned_to,r.branch,r.reason,r.public_summary,r.follow_up_topic];
+  if(base.some(v=>(v||"").toLowerCase().includes(q))) return true;
+  return (S.updates||[]).some(u=>u.request_id===r.id && [u.note,u.public_summary,u.products_discussed,u.follow_up_topic].some(v=>(v||"").toLowerCase().includes(q)));
+};
+// When a search matches inside the write-up or a touch note (not the name/account already on the card),
+// return a short highlighted snippet so it's clear WHERE the hit came from.
+function searchSnippet(r,q){
+  if(!q) return null;
+  const ql=q.toLowerCase();
+  const fields=[];
+  if(r.reason) fields.push(["the write-up",r.reason]);
+  if(r.public_summary) fields.push(["the summary",r.public_summary]);
+  if(r.follow_up_topic) fields.push(["the follow-up topic",r.follow_up_topic]);
+  (S.updates||[]).filter(u=>u.request_id===r.id).forEach(u=>{
+    if(u.note) fields.push(["a touch note",u.note]);
+    if(u.public_summary) fields.push(["a touch summary",u.public_summary]);
+    if(u.products_discussed) fields.push(["products discussed",u.products_discussed]);
+    if(u.follow_up_topic) fields.push(["a touch topic",u.follow_up_topic]);
+  });
+  for(const [label,val] of fields){
+    const i=val.toLowerCase().indexOf(ql);
+    if(i>=0){
+      const s=Math.max(0,i-25), e=Math.min(val.length,i+q.length+35);
+      const pre=(s>0?"\u2026":"")+val.slice(s,i);
+      const hit=val.slice(i,i+q.length);
+      const post=val.slice(i+q.length,e)+(e<val.length?"\u2026":"");
+      return { label, html: esc(pre)+'<span style="background:#fef08a;border-radius:2px;padding:0 2px">'+esc(hit)+'</span>'+esc(post) };
+    }
+  }
+  return null;
+}
 const inScope = r => S.scope==="everyone" ? true : S.scope==="unassigned" ? r.assigned_to==="Unassigned" : r.assigned_to===S.persona.name;
 // Tickets assigned to me, still open, that I haven't acted on (no touch of mine)
 // and haven't dismissed. This drives the "new work" banner. Scheduled-far-out
@@ -987,7 +1144,7 @@ async function quick(r,key){
   try{
     await sbPatch("cp_requests","id=eq."+r.id,patch);
     await sbPost("cp_updates",{request_id:r.id,update_date:today(),status:q.status,note:q.note,author:S.persona.name,minutes:mins||null});
-    logActivity("touch",q.note+" · "+(r.customer_name||"")); toast(q.note+(mins?" · "+mins+" min":"")+" — saved."); S.busy=false; await load();
+    logActivity("touch",q.note+" · "+(r.customer_name||"")); toast(q.note+(mins?" · "+mins+" min":"")+" — saved."+(["Won","Lost","Unresolved"].includes(q.status)?" Add a why? on the card.":"")); S.busy=false; await load();
   }catch(e){ toast("Couldn't save. Try again.",false); S.busy=false; render(); }
 }
 async function assignSelf(r){
@@ -1133,6 +1290,25 @@ function ideaContext(){
   if(S.tab==="reports" && S.reportTab) bits.push(RTABS.reduce((a,x)=>x[0]===S.reportTab?x[1]:a,"")+" report");
   if(S.selectedId){ const r=(S.rows||[]).find(x=>String(x.id)===String(S.selectedId)); if(r&&r.customer_name) bits.push(r.customer_name); }
   return bits.filter(Boolean).join(" \u00b7 ");
+}
+function quicklogModal(){
+  const r=S.rows.find(x=>x.id===S.quicklogId); if(!r) return "";
+  return `<div class="modal-overlay" data-modal-overlay>
+    <div class="modal" style="max-width:440px">
+      <div class="modal-head"><div style="font-weight:700;font-size:15px">\u26A1 Quick log \u00b7 ${esc(r.customer_name)}</div><button class="modal-x" data-modal-close title="Close">\u2715</button></div>
+      <div class="modal-body">
+        <label class="f"><span class="lbl">What did you do?</span><select id="ql_type">${touchTypeOptions(r,"Phone call")}</select></label>
+        <label class="f"><span class="lbl">Note</span><textarea id="ql_note" style="min-height:60px" placeholder="What happened on this touch"></textarea></label>
+        ${notePhrases("ql_note")}
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <label class="f" style="max-width:120px"><span class="lbl">Minutes <span class="tiny muted">optional</span></span><input type="number" id="ql_mins" min="0"/></label>
+          <label class="f" style="flex:1;min-width:150px"><span class="lbl">Next follow-up</span><input type="date" id="ql_next" value="${esc(r.next_follow_up||bizDays(today(),3))}"/></label>
+        </div>
+        ${dateChips("ql_next")}
+      </div>
+      <div class="modal-foot" style="justify-content:flex-end;gap:8px"><button class="btn-ghost" data-modal-close>Cancel</button><button class="btn" id="ql_save" ${S.busy?'disabled':''}>${S.busy?'Logging\u2026':'Log touch'}</button></div>
+    </div>
+  </div>`;
 }
 function ideaModal(){
   const kind=S.ideaKind||"idea";
@@ -1318,6 +1494,7 @@ function render() {
     { id:"sales", label:"Sales Dashboard", icon:I.dash, show:p.type!=="employee" },
     { id:"calendar", label:"Calendar", icon:I.clock||I.dash, show:p.type!=="employee" },
     { id:"manager", label:"Manager View", icon:I.chart, show:["manager","admin","viewer"].includes(p.type) },
+    { id:"pulse", label:"Pulse", icon:I.trend||I.activity, show:["manager","admin"].includes(p.type) },
     { id:"reports", label:"Reports", icon:I.trend, show:p.type!=="employee" },
     { id:"admin", label:"Admin", icon:I.gear||I.bldg, show:p.type==="admin" },
     { id:"activity", label:"Activity", icon:I.activity, show:p.type==="admin" },
@@ -1337,6 +1514,7 @@ function render() {
   else if (S.tab==="admin") body = viewAdmin();
   else if (S.tab==="reports") body = viewReports();
   else if (S.tab==="manager") body = viewManager();
+  else if (S.tab==="pulse") body = viewPulse();
   else if (S.tab==="activity") body = viewActivity();
 
   document.getElementById("root").innerHTML = `
@@ -1378,6 +1556,7 @@ function render() {
       </span>
     </div>`; })()}${body}</div></main>
     ${S.showChangelog?changelogModal():""}
+    ${S.quicklogId?quicklogModal():""}
     ${(S.showTip && !S.showChangelog && !S.showIdea)?tipModal():""}
     ${S.showIdea?ideaModal():""}`;
   bind();
@@ -1477,8 +1656,13 @@ function viewSubmit() {
       ${field?`<label class="f" style="margin-top:12px"><span class="lbl">Follow-up topic <span style="color:#94a3b8;font-weight:400">(optional)</span></span><input id="s_topic" placeholder="The specific thing to raise next time"/></label>`:""}
       <div class="submitbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px">
         <span class="tiny muted">${isLead?`Raised by <b style="color:#475569">${esc(S.persona.name)}</b> — no call logged, no time recorded`:field?`Logging as <b style="color:#475569">${esc(S.persona.name)}</b> — assigned to you`:`Submitting as <b style="color:#475569">${esc(S.persona.name)}</b>`}</span>
+        ${S._dupWarn?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <div style="font-weight:600;color:#92400e;font-size:13px">\u26A0\uFE0F ${esc(S._dupWarn.name)} already has an open card${S._dupWarn.status?` \u2014 ${esc(S._dupWarn.status)}${S._dupWarn.owner&&S._dupWarn.owner!=='Unassigned'?', '+esc(S._dupWarn.owner):''}`:''}.</div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${S.persona.type!=="employee"?`<button type="button" class="btn" data-dupopen style="padding:6px 12px">Open that card</button>`:''}<button type="button" class="btn-ghost" data-dupforce style="padding:6px 12px">Create a new one anyway</button></div>
+        </div>`:""}
         <div style="display:flex;gap:8px"><button class="btn-ghost" type="button" data-clearform>Clear</button><button class="btn" id="s_submit">${I.send} ${S.busy?(isLead?"Sending…":field?"Logging…":"Submitting…"):(isLead?(canAssign?"Raise lead":"Refer it"):field?"Log call":"Submit request")}</button></div>
       </div>
+      ${draftHas("submit")?`<div class="tiny" style="text-align:right;color:#0d9488;margin-top:6px">\u2712\uFE0F Your text is saved on this device until it submits.</div>`:""}
     </div>`;
 
   const recurringCard = () => `
@@ -1592,14 +1776,12 @@ function viewSubmit() {
 }
 
 function listItem(r, sales) {
-  const age = days(r.submitted_at, today());
-  const stale = sales && OPEN_STATUSES.includes(r.status) && age>5;
   return `<button class="item" data-open="${r.id}" style="border-left:4px solid ${stageColor(r.status)}">
     <div style="min-width:0">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="cust">${esc(r.customer_name)}</span>${pill(r.status)}
         ${sales?`<span class="urg"><span class="udot" style="background:${r.urgency==='High'?'#f43f5e':r.urgency==='Medium'?'#f59e0b':'#94a3b8'}"></span>${esc(r.urgency)}</span>`:""}
-        ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
+        ${attentionBadge(r)}
         ${r.source==='Field call'?`<span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:1px 7px;border-radius:999px">Field call</span>`:""}
         ${sales && commentsFor(r.id).some(isMgrNote)?`<span style="font-size:11px;font-weight:600;color:#9f1239;background:#fde2e5;padding:1px 7px;border-radius:999px">Manager note</span>`:""}
       </div>
@@ -1664,8 +1846,6 @@ function subCard(r){
   </button>`;
 }
 function salesCard(r){
-  const age=days(r.submitted_at,today());
-  const stale=OPEN_STATUSES.includes(r.status)&&age>5;
   const hasNote=commentsFor(r.id).some(isMgrNote);
   const hi = r.urgency==='High' && OPEN_STATUSES.includes(r.status);
   const _tt=(S.updates||[]).filter(u=>u.request_id===r.id && u.contact_type);
@@ -1673,7 +1853,7 @@ function salesCard(r){
   return `<button class="subcard${hi?' hipri':''}" data-open="${r.id}" style="border-top:4px solid ${stageColor(r.status)}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
       <div class="cn">${esc(r.customer_name)}</div>
-      ${typeBadge(r)}
+      <div style="display:flex;align-items:center;gap:6px">${(OPEN_STATUSES.includes(r.status)&&r.source!=="Recurring visit")?`<span class="qlog" data-quicklog="${r.id}" title="Quick log a touch" style="font-size:15px;cursor:pointer;line-height:1;padding:2px 5px;border-radius:6px;background:#eff6ff">\u26A1</span>`:""}${typeBadge(r)}</div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
       <b style="font-size:12px;color:#64748b">Status:</b>${pill(r.status)}
@@ -1681,7 +1861,7 @@ function salesCard(r){
     </div>
     ${last?`<div class="kv"><b>Touch type:</b> ${touchIcon(last.contact_type)} ${esc(last.contact_type)}${last.update_date?` · ${fmtDate(last.update_date)}`:''}</div>`:''}
     <div style="display:flex;flex-wrap:wrap;gap:5px">
-      ${stale?`<span class="aging">${I.warn}${age}d aging</span>`:""}
+      ${attentionBadge(r)}
       ${techBadge(r)}
       ${sourceBadge(r)}
       ${isUpcomingVisit(r)?`<span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:1px 8px;border-radius:999px">Scheduled · ${fmtDate(r.next_follow_up)}</span>`:""}
@@ -1693,6 +1873,7 @@ function salesCard(r){
     ${r.contractor?`<div class="kv"><b>Contractor:</b> ${esc(r.contractor)}</div>`:""}
     ${(()=>{const a=addrLines(r);return a.any?`<div class="kv" style="color:#64748b">📍 ${esc([a.l1,a.l2].filter(Boolean).join(', '))}</div>`:"";})()}
     <div class="rsn">${esc(r.reason)}</div>
+    ${(()=>{ if(!S.search) return ""; const sn=searchSnippet(r,S.search); return sn?`<div class="kv" style="color:#64748b;margin-top:2px"><span style="color:#94a3b8">${I.search} found in ${esc(sn.label)}:</span> \u201c${sn.html}\u201d</div>`:""; })()}
   </button>`;
 }
 
@@ -1740,7 +1921,7 @@ function viewMine() {
         <span class="muted tiny">${list.length}</span>
       </div>
     </div>
-    ${searchBar("Search by customer or account…")}
+    ${searchBar("Search customer, account, or notes…")}
     ${list.length===0 ? emptyMsg : `<div class="cardgrid">${list.map(subCard).join("")}</div>`}`;
 }
 
@@ -1805,7 +1986,7 @@ function viewSales() {
     ${viewNotes()}`;
   }
   const f = S.filter;
-  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging 5+ days", nofollowup:"No follow-up date set", today:"Due today", newtome:"New to you — not worked yet" };
+  const SPECIAL = { unassigned:"Unassigned leads", overdue:"Overdue follow-ups", aging:"Aging — untouched a while", cold:"Cold — untouched "+agingThresholds().cold+"+ days", notes:"Unanswered manager notes", firsttouch:"Awaiting first touch", nofollowup:"No follow-up date set", today:"Due today", newtome:"New to you — not worked yet" };
   let list;
   if(S.special==="newtome"){
     list = newToMe();
@@ -1813,7 +1994,10 @@ function viewSales() {
     list = S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
     if(S.special==="unassigned") list=list.filter(r=>r.assigned_to==='Unassigned');
     else if(S.special==="overdue") list=list.filter(r=>r.next_follow_up && r.next_follow_up < today());
-    else if(S.special==="aging") list=list.filter(r=>days(r.submitted_at,today())>5);
+    else if(S.special==="aging") list=list.filter(r=>agingTier(r));
+    else if(S.special==="cold") list=list.filter(r=>{const t=agingTier(r);return t&&t.key==="cold";});
+    else if(S.special==="notes") list=list.filter(r=>noteStatus(r.id)==="needs");
+    else if(S.special==="firsttouch") list=list.filter(neverTouched);
     else if(S.special==="nofollowup") list=list.filter(r=>!r.next_follow_up && !isUpcomingVisit(r));
     else if(S.special==="today") list=list.filter(r=>r.next_follow_up===today());
   } else {
@@ -1845,15 +2029,19 @@ function viewSales() {
       ${sortSelect()}
       <button class="qbtn" data-print="1">${I.printer}Print</button>
     </div>
-    ${searchBar("Search customer, account, or salesperson…")}
+    ${searchBar("Search customer, account, rep, or notes…")}
     ${(()=>{
       if(S.special) return "";
       // Snapshot of what needs attention — scoped to whatever the board is showing (your work by default).
       const mine=S.rows.filter(inScope).filter(r=>OPEN_STATUSES.includes(r.status));
       const overdueN=mine.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
-      const agingN=mine.filter(r=>days(r.submitted_at,today())>5).length;
+      const agingN=mine.filter(r=>agingTier(r)).length;
+      const coldN=mine.filter(r=>{const t=agingTier(r);return t&&t.key==="cold";}).length;
       const nofollowN=mine.filter(r=>!r.next_follow_up && !isUpcomingVisit(r)).length;
       const todayN=mine.filter(r=>r.next_follow_up===today()).length;
+      const notesN=mine.filter(r=>noteStatus(r.id)==="needs").length;
+      const firstN=mine.filter(neverTouched).length;
+      const th=agingThresholds();
       const box=(n,label,sub,jump,tone)=>{
         const good=n===0;
         const toneClass = good?"ok":(tone==="warn"?"warn":"bad");
@@ -1863,8 +2051,11 @@ function viewSales() {
       };
       return `<div class="snapgrid">
         ${box(todayN,"Due today","follow up now","today","warn")}
+        ${box(firstN,"Awaiting 1st touch","new, not started","firsttouch","warn")}
         ${box(overdueN,"Overdue","past the promised date","overdue")}
-        ${box(agingN,"Aging 5+ days","open and sitting","aging")}
+        ${box(agingN,"Aging","untouched "+th.nudge+"+ days","aging")}
+        ${box(coldN,"Cold — review","untouched "+th.cold+"+ days","cold")}
+        ${box(notesN,"Manager notes","awaiting a reply","notes","warn")}
         ${box(nofollowN,"No follow-up date","no next step set","nofollowup")}
       </div>`;
     })()}
@@ -1874,13 +2065,30 @@ function viewSales() {
       ? (S.search
           ? empty(I.search,"No matches","Nothing matches “"+esc(S.search)+"”. Try fewer letters, or clear the search.")
           : empty(I.dash, emTitle, emSub))
-      : (()=>{
+      : (S.special==="cold" ? coldReview(list) : (()=>{
           const leads=list.filter(r=>r.source!=="Project"&&r.source!=="Recurring visit");
           const projects=list.filter(r=>r.source==="Project");
           const recurring=list.filter(r=>r.source==="Recurring visit").sort((a,b)=>(a.next_follow_up||"")<(b.next_follow_up||"")?-1:1);
           const sec=(label,arr)=>arr.length?`<div style="margin-top:26px;padding-top:18px;border-top:2px solid #e2e8f0"><div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:12px">${label} <span class="tiny muted" style="font-weight:500">· ${arr.length}</span></div><div class="cardgrid">${arr.map(salesCard).join("")}</div></div>`:"";
           return `${leads.length?`<div class="cardgrid">${leads.map(salesCard).join("")}</div>`:""}${sec("Projects",projects)}${sec("Recurring visits",recurring)}`;
-        })()}`;
+        })())}`;
+}
+function coldReview(list){
+  const th=agingThresholds();
+  return `<div style="display:flex;flex-direction:column;gap:8px">
+    <div class="tiny muted" style="margin-bottom:4px">No activity in ${th.cold}+ days. Close the dead ones (moves them to <b>No action needed</b> — reversible), or snooze to set a fresh follow-up a week out.</div>
+    ${list.map(r=>{
+      const t=agingTier(r);
+      return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #fecdd3;border-radius:12px;padding:10px 14px">
+        <button class="linkish" data-open="${r.id}" style="font-weight:600;color:#0f172a;text-align:left;min-width:150px;flex:1">${esc(r.customer_name)}</button>
+        ${typeBadge(r)}
+        <span class="pill" style="${STATUS_STYLE[r.status]||''}">${esc(r.status)}</span>
+        <span class="tiny" style="color:#991b1b;font-weight:700">${t?t.days:daysIdle(r)}d idle</span>
+        <button class="btn-ghost" data-snooze="${r.id}" ${S.busy?'disabled':''}>Snooze 1 week</button>
+        <button class="btn-ghost" data-coldclose="${r.id}" style="color:#b91c1c" ${S.busy?'disabled':''}>Close</button>
+      </div>`;
+    }).join("")}
+  </div>`;
 }
 
 function calDate(r){
@@ -2142,6 +2350,10 @@ function viewSalesDetail() {
           </div>
           ${readOnly()?"":dateChips("d_followup")}
         </div>
+        ${["Won","Lost","Unresolved"].includes(r.status)?`<div style="margin-bottom:16px;padding:10px 12px;background:${r.status==="Won"?"#f0fdf4":"#fff5f5"};border:1px solid ${r.status==="Won"?"#bbf7d0":"#fecdd3"};border-radius:10px">
+          <div class="tiny" style="font-weight:600;color:#475569;margin-bottom:6px">Why ${r.status.toLowerCase()}? <span style="font-weight:400;color:#94a3b8">— helps the outcomes report</span></div>
+          <input type="text" id="d_outcome" value="${esc(r.outcome_reason||'')}" ${readOnly()?'disabled':''} placeholder="${r.status==="Won"?'e.g. best price, relationship, fast quote':r.status==="Lost"?'e.g. price, lead time, went with competitor':'e.g. no parts available, customer stopped responding'}" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px"/>
+        </div>`:""}
         <div class="grid2" style="gap:8px;margin-bottom:16px">
           ${info("Branch",r.branch)}${info("Category",r.category)}
           ${info("Wants",r.suggested_action)}${info("Urgency",r.urgency)}
@@ -2198,7 +2410,7 @@ function viewSalesDetail() {
           <div class="fsection-h"><span class="fsdot" style="background:#2563eb"></span>The touch</div>
           <div class="grid2">
             <label class="f"><span class="lbl">What did you do? <span style="color:#94a3b8;font-weight:400">— the action</span></span><select id="u_type">${touchTypeOptions(r,"Phone call")}</select></label>
-            <label class="f"><span class="lbl">Next follow-up</span><input type="date" id="u_next" value="${esc(r.next_follow_up||'')}"/>${dateChips("u_next")}</label>
+            <label class="f"><span class="lbl">Next follow-up</span><input type="date" id="u_next" value="${esc(r.next_follow_up||bizDays(today(),3))}"/>${dateChips("u_next")}</label>
           </div>
           <label class="f" style="margin-top:12px"><span class="lbl">Time spent <span style="color:#94a3b8;font-weight:400">— minutes</span></span>
             <input type="number" id="u_mins" min="0" placeholder="e.g. 30"/>
@@ -2223,6 +2435,7 @@ function viewSalesDetail() {
         <div class="fsection fs-notes">
           <div class="fsection-h"><span class="fsdot" style="background:#d97706"></span>Notes</div>
           <label class="f"><span class="lbl">Internal comments <span style="color:#94a3b8;font-weight:400">— sales only</span></span><textarea id="u_note" style="min-height:70px" placeholder="What happened on this touch. Stays between sales."></textarea></label>
+          ${notePhrases("u_note")}
           <label class="f" style="margin-top:12px"><span class="lbl">Public summary <span style="color:#94a3b8;font-weight:400">— the submitter sees this</span></span><textarea id="u_public" style="min-height:70px" placeholder="e.g. Reached out and set a meeting for next week to walk through the RTU options."></textarea></label>
         </div>
         <button class="btn block" id="u_save" style="margin-top:16px" ${S.busy?'disabled':''}>${S.busy?'Logging…':'Log touch'}</button>
@@ -2681,6 +2894,10 @@ function outcomesReport(){
   const buckets=[["0\u20132 days",0],["3\u20135 days",0],["6\u201310 days",0],["Over 10 days",0]];
   aging.forEach(r=>{ const a=days(r.submitted_at,today()); if(a<=2)buckets[0][1]++; else if(a<=5)buckets[1][1]++; else if(a<=10)buckets[2][1]++; else buckets[3][1]++; });
   const ageColor = l => l==="Over 10 days"?"#e11d48":l==="6\u201310 days"?"#f59e0b":"#0d9488";
+  const reasons={won:{},lost:{}};
+  cards.forEach(r=>{ const key=r.status==="Won"?"won":r.status==="Lost"?"lost":null; if(!key||!r.outcome_reason) return; const rr=r.outcome_reason.trim(); if(rr) reasons[key][rr]=(reasons[key][rr]||0)+1; });
+  const topR=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const decided=won+lost, withReason=cards.filter(r=>(r.status==="Won"||r.status==="Lost")&&r.outcome_reason&&r.outcome_reason.trim()).length;
   return `${reportHead("Outcomes","Whether the work is closing \u2014 and how long it takes.")}
   <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${statBox("Win rate", winRate, "of decided sales leads", won?"color:#16a34a":"")}
@@ -2712,6 +2929,20 @@ function outcomesReport(){
         </div>
       </div>`; }).join("")
     : `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing decided in this range yet.</div>`}
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2 style="font-size:16px;font-weight:600;margin:0 0 2px">Why cards were won and lost</h2>
+    <div class="tiny muted" style="margin-bottom:12px">From the reason captured when a card closes. ${decided?`${withReason} of ${decided} decided cards have a reason recorded${withReason<decided?" \u2014 add them on the card to sharpen this":""}.`:"No decided cards in this range yet."}</div>
+    <div class="grid2" style="gap:16px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px">Won</div>
+        ${topR(reasons.won).length? topR(reasons.won).map(([rr,c])=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#334155">${esc(rr)}</span><span class="tiny muted">${c}</span></div>`).join("") : `<div class="tiny muted" style="font-style:italic">No reasons recorded.</div>`}
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#9f1239;margin-bottom:8px">Lost</div>
+        ${topR(reasons.lost).length? topR(reasons.lost).map(([rr,c])=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#334155">${esc(rr)}</span><span class="tiny muted">${c}</span></div>`).join("") : `<div class="tiny muted" style="font-style:italic">No reasons recorded.</div>`}
+      </div>
+    </div>
   </div>`;
 }
 const RTABS = [["time","Time"],["customers","Customers"],["activity","Activity"],["outcomes","Outcomes"],["tech","Tech"]];
@@ -2765,6 +2996,126 @@ function ideasCard(){
       </div>`:""}`
     : `<div class="tiny muted" style="font-style:italic;padding:8px 0">Nothing yet. The lightbulb sits in the header next to the version \u2014 on every screen, for everyone.</div>`}
   </div>`;
+}
+function viewPulse(){
+  const rows=S.rows||[];
+  const CLOSED=["Won","Lost","Resolved","Unresolved","No action needed"];
+  const open=rows.filter(r=>OPEN_STATUSES.includes(r.status) && r.source!=="Recurring visit");
+  const th=agingThresholds();
+  const tierCount={fresh:0,nudge:0,cooling:0,cold:0};
+  open.forEach(r=>{ const t=agingTier(r); tierCount[t?t.key:"fresh"]++; });
+  const weeksAgo=d=>Math.floor(days(d,today())/7);
+  const wk=[...Array(8)].map(()=>({opened:0,closed:0}));
+  rows.forEach(r=>{ const wo=weeksAgo(r.submitted_at); if(wo>=0&&wo<8) wk[wo].opened++; if(CLOSED.includes(r.status)&&r.last_action_date){ const wc=weeksAgo(r.last_action_date); if(wc>=0&&wc<8) wk[wc].closed++; } });
+  const maxWk=Math.max(1,...wk.map(w=>Math.max(w.opened,w.closed)));
+  const median=arr=>arr.length?(arr.length%2?arr[(arr.length-1)/2]:((arr[arr.length/2-1]+arr[arr.length/2])/2)):null;
+  const resp=rows.filter(r=>r.first_touched_at).map(r=>days(r.submitted_at,r.first_touched_at)).filter(n=>n>=0).sort((a,b)=>a-b);
+  const medResp=median(resp);
+  // #6 first-touch SLA
+  const slaN=slaTarget();
+  const touchedCards=rows.filter(r=>r.first_touched_at);
+  const slaHit=touchedCards.length?Math.round(touchedCards.filter(r=>days(r.submitted_at,r.first_touched_at)<=slaN).length/touchedCards.length*100):null;
+  // #2 trends — flow metrics this period vs prior (cohort-based)
+  const respWin=(lo,hi)=>median(rows.filter(r=>r.first_touched_at && days(r.submitted_at,today())>=lo && days(r.submitted_at,today())<hi).map(r=>days(r.submitted_at,r.first_touched_at)).filter(n=>n>=0).sort((a,b)=>a-b));
+  const winWin=(lo,hi)=>{ const c=rows.filter(r=>(r.status==="Won"||r.status==="Lost")&&r.last_action_date&&days(r.last_action_date,today())>=lo&&days(r.last_action_date,today())<hi); const w=c.filter(r=>r.status==="Won").length; return c.length?Math.round(w/c.length*100):null; };
+  const respThis=respWin(0,7), respPrev=respWin(7,14), winThis=winWin(0,30), winPrev=winWin(30,60);
+  const arrow=(cur,prev,goodUp,suffix)=>{ suffix=suffix||""; if(cur==null||prev==null) return `<span class="tiny muted">\u2014</span>`; if(cur===prev) return `<span class="tiny muted">no change</span>`; const up=cur>prev, good=goodUp?up:!up; return `<span class="tiny" style="font-weight:700;color:${good?'#16a34a':'#e11d48'}">${up?'\u25B2':'\u25BC'} ${Math.abs(cur-prev)}${suffix}</span>`; };
+  const neutral=(cur,prev)=>{ if(prev==null) return `<span class="tiny muted">\u2014</span>`; const d=cur-prev; return `<span class="tiny muted">${d>0?'+':''}${d} vs last</span>`; };
+  // #5 stuck in stage
+  const STUCK_STAGES=["In progress","Quoting","Waiting on info"], STUCK_DAYS=14;
+  const stuck=open.filter(r=>STUCK_STAGES.includes(r.status) && daysInStage(r)>=STUCK_DAYS).map(r=>({r,d:daysInStage(r)})).sort((a,b)=>b.d-a.d);
+  // per-person
+  const people={};
+  open.forEach(r=>{ const who=r.assigned_to||"Unassigned"; (people[who]=people[who]||[]).push(r); });
+  const rowsPP=Object.entries(people).filter(([w])=>w!=="Unassigned").map(([who,arr])=>({ who, open:arr.length,
+    overdue:arr.filter(r=>r.next_follow_up&&r.next_follow_up<today()).length,
+    cold:arr.filter(r=>{const t=agingTier(r);return t&&t.key==="cold";}).length,
+    oldest:Math.max(0,...arr.map(daysIdle)) }));
+  // #4 rep scorecards — 30-day activity
+  const D30=d=>d&&days(d,today())<=30;
+  const touchesByRep={}, closedByRep={}, wonByRep={};
+  (S.updates||[]).forEach(u=>{ if(D30(u.update_date||(u.created_at||"").slice(0,10))) touchesByRep[u.author]=(touchesByRep[u.author]||0)+1; });
+  rows.forEach(r=>{ if(["Won","Lost","Resolved","Unresolved"].includes(r.status) && D30(r.last_action_date)){ const k=r.assigned_to||"Unassigned"; closedByRep[k]=(closedByRep[k]||0)+1; if(r.status==="Won"||r.status==="Resolved") wonByRep[k]=(wonByRep[k]||0)+1; } });
+  const allWho=[...new Set([...rowsPP.map(p=>p.who), ...Object.keys(touchesByRep)])].filter(w=>w&&w!=="Unassigned");
+  const score=allWho.map(who=>{ const load=rowsPP.find(p=>p.who===who)||{open:0,overdue:0,cold:0}; return { who, open:load.open, overdue:load.overdue, cold:load.cold, touches:touchesByRep[who]||0, closed:closedByRep[who]||0, won:wonByRep[who]||0 }; }).sort((a,b)=>b.touches-a.touches || b.open-a.open);
+  const unassignedN=(people["Unassigned"]||[]).length;
+  const nofollowN=open.filter(r=>!r.next_follow_up&&!isUpcomingVisit(r)).length;
+  const un=unansweredNotes();
+  const firstN=open.filter(neverTouched).length;
+  const stat=(n,label,sub,tone)=>`<div class="snapbox ${tone||''}"><div class="sn">${n}</div><div class="sl">${label}</div><div class="ss">${sub}</div></div>`;
+  return `
+    <h1 class="page">Pulse \u2014 team health</h1>
+    <div class="tiny muted" style="margin:-6px 0 18px">How the whole board is doing right now. \u201CAging\u201D counts days since a card was last worked \u2014 thresholds and the SLA target are in Admin.</div>
+    <div class="snapgrid" style="margin-bottom:20px">
+      ${stat(open.length,"Open cards","in flight now")}
+      ${stat(firstN,"Awaiting 1st touch","new, never worked", firstN?"bad":"ok")}
+      ${stat(tierCount.cold,"Cold","untouched "+th.cold+"+ days", tierCount.cold?"bad":"ok")}
+      ${stat(unassignedN,"Unassigned","waiting to be grabbed", unassignedN?"warn":"ok")}
+      ${stat(un.length,"Unanswered notes","manager notes awaiting reply", un.length?"warn":"ok")}
+      ${stat(nofollowN,"No follow-up","open, no next step", nofollowN?"warn":"ok")}
+      ${stat(medResp==null?"\u2014":medResp+"d","Median response","submitted \u2192 first touch")}
+      ${stat(slaHit==null?"\u2014":slaHit+"%","First-touch SLA","within "+slaN+" day"+(slaN===1?"":"s"), slaHit!=null&&slaHit<80?"warn":"ok")}
+    </div>
+    <div class="card" style="margin-bottom:18px">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 10px">Trends \u2014 this week vs last</h2>
+      <table><tbody>
+        <tr><td>Opened</td><td style="font-weight:700">${wk[0].opened}</td><td>${neutral(wk[0].opened,wk[1].opened)}</td></tr>
+        <tr><td>Closed</td><td style="font-weight:700">${wk[0].closed}</td><td>${arrow(wk[0].closed,wk[1].closed,true)}</td></tr>
+        <tr><td>Median response, new leads</td><td style="font-weight:700">${respThis==null?"\u2014":respThis+"d"}</td><td>${arrow(respThis,respPrev,false,"d")}</td></tr>
+        <tr><td>Win rate, last 30 days</td><td style="font-weight:700">${winThis==null?"\u2014":winThis+"%"}</td><td>${arrow(winThis,winPrev,true,"%")}</td></tr>
+      </tbody></table>
+      <div class="tiny muted" style="margin-top:8px">Response and win rate compare each period's own cohort. Green is the good direction.</div>
+    </div>
+    <div class="card" style="margin-bottom:18px">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 10px">Throughput \u2014 opened vs closed, last 8 weeks</h2>
+      <table><thead><tr><th>Week</th><th>Opened</th><th>Closed</th><th style="width:42%">&nbsp;</th><th>Net</th></tr></thead><tbody>
+      ${wk.map((w,i)=>{ const label=i===0?"This week":i===1?"Last week":i+" wks ago"; const net=w.opened-w.closed;
+        return `<tr><td>${label}</td><td>${w.opened}</td><td>${w.closed}</td>
+          <td><span style="display:inline-block;height:9px;width:${Math.round(w.opened/maxWk*100)}%;background:#3b82f6;border-radius:4px"></span><br><span style="display:inline-block;height:9px;width:${Math.round(w.closed/maxWk*100)}%;background:#10b981;border-radius:4px"></span></td>
+          <td style="color:${net>0?'#b45309':net<0?'#047857':'#64748b'};font-weight:700">${net>0?'+'+net:net}</td></tr>`; }).join("")}
+      </tbody></table>
+      <div class="tiny muted" style="margin-top:8px"><span style="color:#3b82f6;font-weight:700">\u25A0</span> opened&nbsp;&nbsp;<span style="color:#10b981;font-weight:700">\u25A0</span> closed&nbsp;&nbsp;\u00b7&nbsp;&nbsp;a positive Net week means the open pile grew.</div>
+    </div>
+    <div class="card" style="margin-bottom:18px">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 10px">Aging of open cards</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${[["fresh","Fresh / scheduled","#dcfce7","#166534"],["nudge","Needs a nudge","#fef9c3","#854d0e"],["cooling","Going cold","#ffedd5","#9a3412"],["cold","Cold \u2014 review","#fee2e2","#991b1b"]].map(([k,l,bg,tx])=>`<div style="flex:1;min-width:120px;background:${bg};border-radius:12px;padding:12px 14px"><div style="font-size:24px;font-weight:800;color:${tx}">${tierCount[k]}</div><div class="tiny" style="color:${tx};font-weight:600">${l}</div></div>`).join("")}
+      </div>
+    </div>
+    ${stuck.length?`<div class="card" style="margin-bottom:18px">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 4px">Stuck in a stage</h2>
+      <div class="tiny muted" style="margin-bottom:10px">Open cards sitting in the same stage ${STUCK_DAYS}+ days \u2014 a pipeline bottleneck, even if they've been touched.</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+      ${stuck.slice(0,12).map(x=>`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px">
+        <button class="linkish" data-open="${x.r.id}" style="font-weight:600;color:#0f172a;text-align:left;flex:1;min-width:150px">${esc(x.r.customer_name)}</button>
+        <span class="pill" style="${STATUS_STYLE[x.r.status]||''}">${esc(x.r.status)}</span>
+        <span class="tiny muted">${esc(x.r.assigned_to||"Unassigned")}</span>
+        <span class="tiny" style="font-weight:700;color:${x.d>=30?'#b91c1c':'#9a3412'}">${x.d}d in stage</span>
+      </div>`).join("")}
+      </div>
+      ${stuck.length>12?`<div class="tiny muted" style="margin-top:8px">+ ${stuck.length-12} more.</div>`:""}
+    </div>`:""}
+    ${un.length?`<div class="card" style="margin-bottom:18px">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 4px">Manager notes awaiting a reply</h2>
+      <div class="tiny muted" style="margin-bottom:10px">A manager left a note and the rep hasn't responded yet \u2014 longest-waiting first.</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+      ${un.slice(0,10).map(x=>`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid ${x.wait>=3?'#fecdd3':'#e2e8f0'};border-radius:10px;padding:8px 12px">
+        <button class="linkish" data-open="${x.r.id}" style="font-weight:600;color:#0f172a;text-align:left;flex:1;min-width:150px">${esc(x.r.customer_name)}</button>
+        <span class="tiny muted">owner: ${esc(x.r.assigned_to||"Unassigned")}</span>
+        <span class="tiny" style="font-weight:700;color:${x.wait>=3?'#b91c1c':'#854d0e'}">waiting ${x.wait}d</span>
+      </div>`).join("")}
+      </div>
+      ${un.length>10?`<div class="tiny muted" style="margin-top:8px">+ ${un.length-10} more.</div>`:""}
+    </div>`:""}
+    <div class="card">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 2px">Rep scorecards</h2>
+      <div class="tiny muted" style="margin-bottom:10px">Current load, plus activity over the last 30 days. Sorted by touches logged.</div>
+      ${score.length?`<table><thead><tr><th>Person</th><th>Open</th><th>Overdue</th><th>Cold</th><th>Touches</th><th>Closed</th><th>Won</th></tr></thead><tbody>
+      ${score.map(s=>`<tr><td style="font-weight:600">${esc(s.who)}</td><td>${s.open}</td><td style="${s.overdue?'color:#e11d48;font-weight:700':''}">${s.overdue}</td><td style="${s.cold?'color:#b91c1c;font-weight:700':''}">${s.cold}</td><td>${s.touches}</td><td>${s.closed}</td><td style="${s.won?'color:#16a34a;font-weight:700':''}">${s.won}</td></tr>`).join("")}
+      </tbody></table>
+      <div class="tiny muted" style="margin-top:8px">Open / Overdue / Cold are right now; Touches / Closed / Won are the last 30 days.${unassignedN?` Plus <b>${unassignedN}</b> unassigned in the grab pile.`:""}</div>`:`<div class="tiny muted">No activity to score yet.</div>`}
+    </div>
+  `;
 }
 function viewAdmin(){
   return `
@@ -2823,6 +3174,36 @@ ${ideasCard()}
         <button class="btn" id="np_add" ${S.busy?'disabled':''} style="background:#0284c7">${I.plus} Add person</button>
       </div>
       <div class="tiny muted" style="margin-top:8px">Deactivating hides someone from the app but keeps their history. Removing is permanent — cards they own keep their name.</div>
+    </div>
+    ${(()=>{ const th=agingThresholds(); return `<div class="card" style="margin-bottom:20px">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px">Attention &amp; aging</h2>
+      <div class="tiny muted" style="margin-bottom:12px">How many days a card can sit <b>with no activity</b> before it's flagged. Working a card (any touch, assignment, or quick action) resets its clock. Cards with a future follow-up date are counted as scheduled, not aging.</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+        <label class="f" style="max-width:150px"><span class="lbl">Needs a nudge</span><input type="number" min="1" id="ag_nudge" value="${th.nudge}"/></label>
+        <label class="f" style="max-width:150px"><span class="lbl">Going cold</span><input type="number" min="1" id="ag_cooling" value="${th.cooling}"/></label>
+        <label class="f" style="max-width:150px"><span class="lbl">Cold — review</span><input type="number" min="1" id="ag_cold" value="${th.cold}"/></label>
+        <button class="btn" id="ag_save" ${S.busy?'disabled':''} style="margin-bottom:2px">${S.busy?'Saving…':'Save thresholds'}</button>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #eef2f6">
+        <label class="f" style="max-width:200px"><span class="lbl">First-touch SLA (days)</span><input type="number" min="1" id="sla_days" value="${slaTarget()}"/></label>
+        <button class="btn" id="sla_save" ${S.busy?'disabled':''} style="margin-bottom:2px">${S.busy?'Saving…':'Save SLA'}</button>
+        <div class="tiny muted" style="flex:1;min-width:180px">New leads should get their first touch within this many days. Drives the SLA hit-rate on Pulse.</div>
+      </div>
+    </div>`; })()}
+    ${(()=>{ const d=(S.settings&&S.settings.digest)||{recipients:[],enabled:true}; return `<div class="card" style="margin-bottom:20px">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px">Weekly digest email</h2>
+      <div class="tiny muted" style="margin-bottom:12px">A Monday-morning summary \u2014 cold cards, unanswered notes, aging spread, awaiting-first-touch, wins/losses \u2014 emailed to the people below. Requires a one-time Vercel setup (the api/digest function, cron, and a Brevo key).</div>
+      <label class="f"><span class="lbl">Recipients <span class="tiny muted">\u2014 one email per line</span></span><textarea id="dg_recips" style="min-height:66px" placeholder="you@company.com">${esc((d.recipients||[]).join("\n"))}</textarea></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:8px 0 10px;font-size:13px;color:#334155"><input type="checkbox" id="dg_enabled" ${d.enabled!==false?"checked":""}/> Send the scheduled weekly email</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dg_save" ${S.busy?'disabled':''}>${S.busy?'Saving\u2026':'Save'}</button><button class="btn-ghost" id="dg_test" ${S.busy?'disabled':''}>Send a test now</button><span class="tiny muted" style="align-self:center">Save first, then test.</span></div>
+    </div>`; })()}
+    <div class="card" style="margin-bottom:20px;border:1px solid #fecaca;background:#fff5f5">
+      <h2 style="font-size:16px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="display:inline-flex">\u{1F512}</span> Security</h2>
+      <div class="tiny muted" style="margin-bottom:12px">Sign everyone out on every device — each person signs in again next time. Use it if a laptop goes missing, someone leaves, or you just want a clean slate. <b>Your own session stays active.</b></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="signout_all" ${S.busy?'disabled':''} style="background:${S.armSignoutAll?'#b91c1c':'#ef4444'}">${S.busy?'Signing out…':(S.armSignoutAll?'Tap again to confirm':'Sign out everyone')}</button>
+        ${S.armSignoutAll?`<button class="btn-ghost" id="signout_all_cancel">Cancel</button><span class="tiny" style="color:#b91c1c">This ends every other session immediately.</span>`:''}
+      </div>
     </div>`;
 }
 function viewManager() {
@@ -2835,17 +3216,19 @@ function viewManager() {
   const avg = touched.length?(touched.reduce((s,r)=>s+days(r.submitted_at,r.first_touched_at),0)/touched.length).toFixed(1):"—";
   const byBranch = BRANCHES.map(b=>({b,n:rows.filter(r=>r.branch===b).length}));
   const maxB = Math.max(1,...byBranch.map(x=>x.n));
-  const aging = open.map(r=>({...r,age:days(r.submitted_at,today())})).sort((a,b)=>b.age-a.age);
+  const aging = open.map(r=>({...r,age:daysIdle(r)})).sort((a,b)=>b.age-a.age);
   const byPerson = Object.entries(rows.reduce((m,r)=>{const k=r.submitted_by||'Unknown';m[k]=(m[k]||0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]);
   const maxP = Math.max(1,...byPerson.map(x=>x[1]));
   const unassigned = open.filter(r=>r.assigned_to==='Unassigned').length;
   const overdue = open.filter(r=>r.next_follow_up && r.next_follow_up < today()).length;
-  const aging5 = open.filter(r=>days(r.submitted_at,today())>5).length;
+  const aging5 = open.filter(r=>agingTier(r)).length;
+  const coldN = open.filter(r=>{const t=agingTier(r);return t&&t.key==="cold";}).length;
+  const notesN = unansweredNotes().length;
   const nofollow = open.filter(r=>!r.next_follow_up && !isUpcomingVisit(r)).length;
   const attn=(n,label,sub,jump)=>{const good=n===0;return good
     ? `<div class="attncard ok"><div class="an">${n}</div><div class="al">${label}</div><div class="as">all clear</div></div>`
     : `<div class="attncard bad" data-mgr-jump="${jump}" style="cursor:pointer"><div class="an">${n}</div><div class="al">${label}</div><div class="as">${sub}</div><div class="tiny" style="margin-top:6px;font-weight:600;opacity:.85">View →</div></div>`;};
-  const allClear = unassigned===0 && overdue===0 && aging5===0 && nofollow===0;
+  const allClear = unassigned===0 && overdue===0 && aging5===0 && nofollow===0 && notesN===0;
   const quotedTotal = S.updates.reduce((s,u)=>s+(Number(u.quoted_value)||0),0);
   const orderedTotal = S.updates.reduce((s,u)=>s+(Number(u.ordered_value)||0),0);
   const hitRate = quotedTotal>0 ? Math.round(orderedTotal/quotedTotal*100)+"%" : "—";
@@ -2866,7 +3249,9 @@ function viewManager() {
     <div class="attn">
       ${attn(unassigned,"Unassigned","nobody owns these yet","unassigned")}
       ${attn(overdue,"Overdue follow-ups","the promised date has passed","overdue")}
-      ${attn(aging5,"Aging 5+ days","open and sitting too long","aging")}
+      ${attn(aging5,"Aging","untouched "+agingThresholds().nudge+"+ days","aging")}
+      ${attn(coldN,"Cold — review","untouched "+agingThresholds().cold+"+ days","cold")}
+      ${attn(notesN,"Manager notes","awaiting a reply from the rep","notes")}
       ${attn(nofollow,"No follow-up date","open with no next step set","nofollowup")}
     </div>
     <div class="stats" style="margin-bottom:20px">
@@ -2908,7 +3293,7 @@ function viewManager() {
         ${aging.length===0?'<p class="muted" style="font-size:14px">Nothing open. Clean board.</p>':
           `<div class="stack">${aging.map(r=>`<button class="dayrow" data-noteopen="${r.id}" style="align-items:center;justify-content:space-between;border-left-color:${stageColor(r.status)}">
             <div style="min-width:0"><div style="font-size:14px;font-weight:500;color:#334155">${esc(r.customer_name)}</div><div class="tiny muted">${esc(r.branch)} · ${r.assigned_to==='Unassigned'?'unassigned':esc(r.assigned_to)}${(r.next_follow_up&&r.next_follow_up<today())?' · <span style="color:#e11d48;font-weight:600">follow-up overdue</span>':''}</div></div>
-            <div style="display:flex;align-items:center;gap:8px">${pill(r.status)}<span style="font-size:12px;font-weight:600;width:44px;text-align:right;color:${r.age>5?'#e11d48':'#94a3b8'}">${r.age}d</span></div>
+            <div style="display:flex;align-items:center;gap:8px">${pill(r.status)}<span style="font-size:12px;font-weight:600;width:44px;text-align:right;color:${r.age>=agingThresholds().nudge?'#e11d48':'#94a3b8'}">${r.age}d</span></div>
           </button>`).join("")}</div>`}
         <p class="tiny muted" style="margin-top:12px">Anything red has been sitting more than 5 days. Tap any card to open it.</p>
       </div>
@@ -2970,7 +3355,7 @@ function bind() {
   const ep=document.querySelector("[data-endpreview]");
   if(ep) ep.onclick=()=>{ if(S.realPersona){ S.persona=S.realPersona; S.realPersona=null; S.tab="admin"; S.selectedId=null; S.special=null; S.search=""; render(); } };
   const signoutBtn=document.querySelector("[data-signout]"); if(signoutBtn) signoutBtn.onclick=()=>{ if(confirm("Sign out of Customer Pulse?")) signOut(); };
-  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); });
+  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; S.selectedId=null; S.search=""; S.special=null; render(); if(b.dataset.tab==="activity") load(); });
   const qs=document.querySelector("[data-search]"); if(qs) qs.oninput=()=>{ S.search=qs.value; S._focus="q_search"; render(); };
   const qc=document.querySelector("[data-clearsearch]"); if(qc) qc.onclick=()=>{ S.search=""; S._focus="q_search"; render(); };
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ S.selectedId=b.dataset.open; render(); });
@@ -3055,6 +3440,63 @@ function bind() {
     try{ await sbPatch("cp_people","id=eq."+x.id,{ email:v||null }); logActivity("people","set an email for "+x.name); toast(v?("Email saved for "+x.name+"."):("Email cleared for "+x.name+".")); S.busy=false; await load({full:true}); }
     catch(e){ toast("Couldn't save — is that email already used by someone else?",false); S.busy=false; await load({full:true}); }
   });
+  const agS=document.getElementById("ag_save");
+  if(agS) agS.onclick=async()=>{
+    const g=id=>Math.max(1,parseInt(document.getElementById(id).value)||0);
+    const val={ nudge:g("ag_nudge"), cooling:g("ag_cooling"), cold:g("ag_cold") };
+    if(!(val.nudge<val.cooling && val.cooling<val.cold)){ toast("Keep them in order: nudge < going cold < cold.",false); return; }
+    S.busy=true; render();
+    try{ await sbPatch("cp_settings","key=eq.aging",{ value:val }); logActivity("settings","updated aging thresholds"); toast("Saved. Attention flags now use "+val.nudge+"/"+val.cooling+"/"+val.cold+" days."); }
+    catch(e){ toast("Couldn't save the thresholds. Try again.",false); }
+    S.busy=false; await load();
+  };
+  const slaSv=document.getElementById("sla_save");
+  if(slaSv) slaSv.onclick=async()=>{
+    const d=Math.max(1,parseInt(document.getElementById("sla_days").value)||1);
+    S.busy=true; render();
+    try{ await sbPatch("cp_settings","key=eq.sla",{ value:{firstTouchDays:d} }); logActivity("settings","set first-touch SLA to "+d+"d"); toast("Saved. First-touch SLA is now "+d+" day"+(d===1?"":"s")+"."); }
+    catch(e){ toast("Couldn't save the SLA. Try again.",false); }
+    S.busy=false; await load();
+  };
+  const soaC=document.getElementById("signout_all_cancel");
+  if(soaC) soaC.onclick=()=>{ S.armSignoutAll=false; render(); };
+  const dgS=document.getElementById("dg_save");
+  if(dgS) dgS.onclick=async()=>{
+    const recipients=(document.getElementById("dg_recips").value||"").split(/[\n,]+/).map(s=>s.trim()).filter(s=>/.+@.+\..+/.test(s));
+    const enabled=document.getElementById("dg_enabled").checked;
+    S.busy=true; render();
+    try{ await sbPatch("cp_settings","key=eq.digest",{ value:{recipients,enabled} }); logActivity("settings","updated weekly digest ("+recipients.length+" recipients)"); toast("Saved \u2014 "+recipients.length+" recipient"+(recipients.length===1?"":"s")+"."); }
+    catch(e){ toast("Couldn't save. Try again.",false); }
+    S.busy=false; await load();
+  };
+  const dgT=document.getElementById("dg_test");
+  if(dgT) dgT.onclick=async()=>{
+    S.busy=true; render();
+    try{
+      const r=await fetch("/api/digest?test=1",{ headers:{ Authorization:"Bearer "+SB_TOKEN } });
+      const j=await r.json().catch(()=>({}));
+      if(r.ok && j.ok) toast("Test digest sent to "+j.sent_to+" recipient"+(j.sent_to===1?"":"s")+".");
+      else toast(j.reason||j.error||"Couldn't send \u2014 check the Vercel setup.",false);
+    }catch(e){ toast("Couldn't reach the digest endpoint \u2014 is it deployed?",false); }
+    S.busy=false; render();
+  };
+  const soa=document.getElementById("signout_all");
+  if(soa) soa.onclick=async()=>{
+    if(!S.armSignoutAll){ S.armSignoutAll=true; render(); return; }
+    S.busy=true; render();
+    try{
+      const res=await sbPost("rpc/cp_signout_everyone",{});
+      const n=typeof res==="number"?res:(Array.isArray(res)?res[0]:null);
+      logActivity("security","signed everyone out");
+      S.armSignoutAll=false; S.busy=false;
+      toast("Signed everyone out"+(typeof n==="number"?` — ${n} session${n===1?'':'s'} cleared`:"")+". They'll sign in again next time.");
+      render();
+    }catch(e){
+      S.armSignoutAll=false; S.busy=false;
+      toast(String(e).toLowerCase().includes("admin")?"Admins only — that action isn't allowed for your role.":"Couldn't sign everyone out. Try again.",false);
+      render();
+    }
+  };
   const npa=document.getElementById("np_add");
   if(npa) npa.onclick=async()=>{
     const name=document.getElementById("np_name").value.trim();
@@ -3120,13 +3562,16 @@ function bind() {
     S.ideaKind=b.dataset.ideakind; render();
   });
   const isnd=document.getElementById("idea_send");
+  if(isnd) draftWire("idea", ["idea_body"], ["idea_body"]);
   if(isnd) isnd.onclick=async()=>{
     const body=document.getElementById("idea_body").value.trim();
     if(!body){ toast("Tell me what's on your mind first.",false); return; }
     S.busy=true; render();
     try{
       await sbPost("cp_ideas",{ submitted_by:S.persona.name, kind:S.ideaKind||"idea", body, context:ideaContext(), app_version:APP_VERSION, status:"New" });
+      sendIdeaToCatalog(body, S.persona.name); // also lands on the App Catalog board (L815) — best-effort, never blocks
       logActivity("idea",(S.ideaKind==="bug"?"reported a problem":"sent an idea"));
+      draftClear("idea");
       S.showIdea=false; S.ideaDraft=null; S.ideaKind=null; S.busy=false;
       toast((S.ideaKind==="bug"?"Thanks — logged it.":"Got it — thanks!"));
       await load({full:true});
@@ -3147,9 +3592,26 @@ function bind() {
     try{ await sbDelete("cp_ideas","id=eq."+i.id); toast("Removed."); S.busy=false; await load({full:true}); }
     catch(e){ toast("Couldn't remove it. Try again.",false); S.busy=false; render(); }
   });
-  const closeAny=()=>{ if(S.showIdea) closeIdea(); else closeChangelog(); };
+  const closeAny=()=>{ if(S.quicklogId) { S.quicklogId=null; render(); } else if(S.showIdea) closeIdea(); else closeChangelog(); };
   document.querySelectorAll("[data-modal-close]").forEach(b=>b.onclick=closeAny);
   const ov=document.querySelector("[data-modal-overlay]"); if(ov) ov.onclick=(e)=>{ if(e.target===ov) closeAny(); };
+  document.querySelectorAll("[data-quicklog]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); S.quicklogId=b.dataset.quicklog; render(); });
+  document.querySelectorAll("[data-notephrase]").forEach(b=>b.onclick=()=>{ const t=document.getElementById(b.dataset.notephrase); if(!t) return; const ph=b.dataset.phrase; t.value = t.value.trim() ? t.value.replace(/\s*$/,"")+" \u00b7 "+ph : ph; t.dispatchEvent(new Event("input")); t.focus(); });
+  const qls=document.getElementById("ql_save");
+  if(qls) qls.onclick=async()=>{
+    const r=S.rows.find(x=>x.id===S.quicklogId); if(!r) return;
+    const type=document.getElementById("ql_type").value;
+    const note=document.getElementById("ql_note").value.trim();
+    const mins=Number(document.getElementById("ql_mins").value)||null;
+    const next=document.getElementById("ql_next").value||null;
+    const status=touchMapFor(r)[type]||r.status;
+    S.busy=true; render();
+    try{
+      await sbPost("cp_updates",{ request_id:r.id, update_date:today(), contact_type:type, status, note:note||null, author:S.persona.name, minutes:mins });
+      await sbPatch("cp_requests","id=eq."+r.id,{ status, next_follow_up:next, first_touched_at:r.first_touched_at||today(), last_action_date:today() });
+      logActivity("touch","quick-logged a touch on "+(r.customer_name||"")); toast("Touch logged."); S.quicklogId=null; S.busy=false; await load();
+    }catch(e){ toast("Couldn't log the touch. Try again.",false); S.busy=false; render(); }
+  };
   document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>quick(S.rows.find(x=>x.id===S.selectedId), b.dataset.quick));
   document.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ S.scope=b.dataset.scope; S.special=null; render(); });
   document.querySelectorAll("[data-salesview]").forEach(b=>b.onclick=()=>{ S.salesView=b.dataset.salesview; render(); });
@@ -3193,6 +3655,13 @@ function bind() {
   const asg=document.querySelector("[data-assign]"); if(asg) asg.onclick=()=>assignSelf(S.rows.find(x=>x.id===S.selectedId));
   const del=document.querySelector("[data-delete]"); if(del) del.onclick=()=>deleteCard(S.rows.find(x=>x.id===S.selectedId));
   const al=document.querySelector("[data-assign-lead]"); if(al) al.onchange=()=>assignLead(S.rows.find(x=>x.id===S.selectedId), al.value);
+  const doc=document.getElementById("d_outcome");
+  if(doc) doc.onchange=async()=>{
+    const r=S.rows.find(x=>x.id===S.selectedId); if(!r||readOnly()) return;
+    const v=doc.value.trim()||null;
+    try{ await sbPatch("cp_requests","id=eq."+r.id,{ outcome_reason:v }); r.outcome_reason=v; toast(v?"Reason saved.":"Reason cleared."); }
+    catch(e){ toast("Couldn't save the reason. Try again.",false); }
+  };
   const dfu=document.getElementById("d_followup");
   if(dfu) dfu.onchange=async()=>{
     const r=S.rows.find(x=>x.id===S.selectedId); if(!r||readOnly()) return;
@@ -3218,6 +3687,20 @@ function bind() {
   document.querySelectorAll("[data-mgr-jump]").forEach(b=>b.onclick=()=>{ S.special=b.dataset.mgrJump; S.tab="sales"; S.selectedId=null; S.scope="everyone"; render(); });
   document.querySelectorAll("[data-special]").forEach(b=>b.onclick=()=>{ S.special=b.dataset.special; S.tab="sales"; render(); });
   const cs=document.querySelector("[data-clearspecial]"); if(cs) cs.onclick=()=>{ S.special=null; render(); };
+  document.querySelectorAll("[data-snooze]").forEach(b=>b.onclick=async()=>{
+    const r=S.rows.find(x=>x.id===b.dataset.snooze); if(!r) return;
+    const when=dateShortcut("week"); S.busy=true; render();
+    try{ await sbPatch("cp_requests","id=eq."+r.id,{ next_follow_up:when, last_action_date:today() }); logActivity("snooze","snoozed "+(r.customer_name||"")+" a week"); toast("Snoozed \u2014 follow-up set for "+fmtDate(when)+"."); }
+    catch(e){ toast("Couldn't snooze that one. Try again.",false); }
+    S.busy=false; await load();
+  });
+  document.querySelectorAll("[data-coldclose]").forEach(b=>b.onclick=async()=>{
+    const r=S.rows.find(x=>x.id===b.dataset.coldclose); if(!r) return;
+    S.busy=true; render();
+    try{ await sbPatch("cp_requests","id=eq."+r.id,{ status:"No action needed", last_action_date:today() }); logActivity("close","closed cold card "+(r.customer_name||"")); toast("Closed \u2014 moved to No action needed. Reopen any time from the card."); }
+    catch(e){ toast("Couldn't close that one. Try again.",false); }
+    S.busy=false; await load();
+  });
   document.querySelectorAll("[data-recur-off]").forEach(b=>b.onclick=async()=>{
     const s=(S.recurring||[]).find(x=>x.id===b.dataset.recurOff); if(!s) return;
     if(!confirm("Stop the recurring visits for "+s.customer_name+"? Existing cards stay; no new ones will be created.")) return;
@@ -3235,6 +3718,10 @@ function bind() {
     pbSelEl.addEventListener("change",syncPb); syncPb();
   }
   const sb=document.getElementById("s_submit");
+  if(sb) draftWire("submit", ["s_customer","s_account","s_contact","s_phone","s_email","s_reason","s_issue"], ["s_reason","s_customer","s_issue"]);
+  const dupO=document.querySelector("[data-dupopen]"); if(dupO) dupO.onclick=()=>{ const id=S._dupWarn&&S._dupWarn.id; S._dupWarn=null; if(id){ S.tab="sales"; S.selectedId=id; } render(); };
+  const dupF=document.querySelector("[data-dupforce]"); if(dupF) dupF.onclick=()=>{ S._dupForce=true; S._dupWarn=null; const b=document.getElementById("s_submit"); if(b) b.click(); };
+  { const sc=document.getElementById("s_customer"); if(sc) sc.addEventListener("input",()=>{ if(S._dupWarn){ S._dupWarn=null; S._dupForce=false; render(); } }); }
   if(sb) sb.onclick=async()=>{
     const g=id=>{ const el=document.getElementById(id); return el?el.value.trim():""; };
     const field=S.persona.type!=="employee";
@@ -3248,6 +3735,11 @@ function bind() {
     const base={ submitted_by:S.persona.name, customer_name:g("s_customer"), account_number:g("s_account")||null, contact_name:g("s_contact")||null, phone:g("s_phone")||null, email:g("s_email")||null, address1:g("s_addr1")||null, address2:g("s_addr2")||null, city:g("s_city")||null, state:g("s_state")||null, zip:g("s_zip")||null, branch:document.getElementById("s_branch").value, suggested_action:document.getElementById("s_action").value, category, urgency:document.getElementById("s_urgency").value, reason:g("s_reason"),
       type, manufacturer:g("s_mfr")||null, model:g("s_model")||null, serial:g("s_serial")||null, case_number:g("s_caseno")||null, issue:g("s_issue")||null, primary_brand, customer_type, contractor };
     if(!base.customer_name||!base.reason){ toast("Customer name and the details are required.",false); return; }
+    // #3 Open-card guard — warn once if this customer already has an open card.
+    const dupKey=base.customer_name.toLowerCase();
+    const dup=S.rows.find(r=>OPEN_STATUSES.includes(r.status) && (r.customer_name||"").toLowerCase()===dupKey && r.source!=="Recurring visit");
+    if(dup && !S._dupForce){ S._dupWarn={id:dup.id,name:dup.customer_name,status:dup.status,owner:dup.assigned_to}; render(); return; }
+    S._dupWarn=null; S._dupForce=false;
     if(type==="tech" && field && isTechPersona && !base.issue){ toast("Describe the issue before logging it.",false); return; }
     const lead = S.submitMode==="lead" && field;
     const ownerEl=document.getElementById("s_owner");
@@ -3283,6 +3775,7 @@ function bind() {
         }
       }
       logActivity("submit",(lead?"raised a lead for "+owner+": ":field?(isTechPersona?"logged a tech contact: ":"logged a field call: "):"submitted a request: ")+base.customer_name);
+      draftClear("submit");
       toast(lead?(owner+" has it — it's on their board now."):field?(handedOff?("Logged — "+owner+" has it now."):(isTechPersona?"Tech contact logged — it's in your pipeline.":"Field call logged — it's in your pipeline.")):"Request submitted — sales can see it now.");
       if(lead){ S.tab="sales"; S.scope="everyone"; } else if(field){ S.tab="sales"; S.scope=handedOff?"everyone":"mine"; } else { S.tab="mine"; }
       S.busy=false; await load();
@@ -3291,6 +3784,7 @@ function bind() {
 
   document.querySelectorAll("[data-submode]").forEach(b=>b.onclick=()=>{ S.submitMode=b.dataset.submode; render(); });
   document.querySelectorAll("[data-clearform]").forEach(b=>b.onclick=()=>{
+    draftClear("submit"); draftClear("internal");
     const card=b.closest(".card"); if(!card) return;
     card.querySelectorAll("input").forEach(el=>{ if(el.type!=="file"){ el.value=""; el.classList.remove("autofilled"); } });
     card.querySelectorAll("textarea").forEach(el=>el.value="");
@@ -3350,6 +3844,7 @@ function bind() {
 
   document.querySelectorAll("[data-iminset]").forEach(b=>b.onclick=()=>{ const el=document.getElementById("i_mins"); if(el) el.value=b.dataset.iminset; });
   const ib=document.getElementById("i_submit");
+  if(ib) draftWire("internal", ["i_who","i_reason"], ["i_reason"]);
   if(ib) ib.onclick=async()=>{
     const g=id=>{ const el=document.getElementById(id); return el?el.value.trim():""; };
     const who=g("i_who"), reason=g("i_reason");
@@ -3367,6 +3862,7 @@ function bind() {
       if(row&&row.id){ try{ await sbPost("cp_updates",{ request_id:row.id, update_date:today(), contact_type:"Internal support", status, note:reason, author:S.persona.name, minutes:mins }); }catch(_){}
       }
       logActivity("submit","logged internal support for "+who);
+      draftClear("internal");
       toast("Internal support logged — it's in your pipeline."); S.tab="sales"; S.scope="mine"; S.busy=false; await load();
     }catch(e){ toast("Couldn't log it. Try again.",false); S.busy=false; render(); }
   };
